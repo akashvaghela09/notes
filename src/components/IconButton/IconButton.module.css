@@ -1,0 +1,41 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+  flex: none;
+}
+.btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.btn:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.sm {
+  width: 28px;
+  height: 28px;
+}
+.md {
+  width: 32px;
+  height: 32px;
+}
+
+.active {
+  background: var(--accent-subtle);
+  color: var(--accent-text);
+}
+.active:hover {
+  background: var(--accent-subtle);
+  color: var(--accent-text);
+}
+
+.danger:hover {
+  background: var(--danger-subtle);
+  color: var(--danger);
+}

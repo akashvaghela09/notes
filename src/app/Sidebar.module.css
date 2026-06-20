@@ -1,0 +1,219 @@
+.sidebar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  height: 100%;
+  background: var(--bg-sunken);
+  border-right: 1px solid var(--border);
+  padding: var(--space-3) var(--space-3) 0;
+  gap: var(--space-2);
+  overflow: hidden;
+}
+
+.searchWrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+  height: 36px;
+  flex: none;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.searchIcon {
+  color: var(--text-tertiary);
+  flex: none;
+}
+.search {
+  flex: 1;
+}
+.clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  flex: none;
+}
+.clear:hover {
+  background: var(--bg-active);
+  color: var(--text);
+}
+
+.newNote {
+  flex: none;
+  justify-content: center;
+}
+
+/* Loading placeholder shown while SQLite connects. Mirrors the real group +
+   row geometry (group header + 30px rows with icon/label) so swapping in the
+   live content causes no layout shift. */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.skelHead {
+  display: inline-block;
+  width: 42%;
+  height: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  animation: skelPulse 1.4s ease-in-out infinite;
+}
+.skelItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 30px;
+  padding: 0 var(--space-3);
+}
+.skelDot {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  flex: none;
+  animation: skelPulse 1.4s ease-in-out infinite;
+}
+.skelBar {
+  height: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  animation: skelPulse 1.4s ease-in-out infinite;
+}
+@keyframes skelPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.85; }
+}
+
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-1);
+  /* Hide this scrollbar — it would sit mid-screen between sidebar and content. */
+  scrollbar-width: none;
+}
+.scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.groupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-2) var(--space-1) var(--space-3);
+  min-height: 24px;
+}
+.groupLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.pinRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 30px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  text-align: left;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.pinRow:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.pinIcon {
+  flex: none;
+  color: var(--text-tertiary);
+}
+.pinTitle {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.renameInput {
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  padding: 0 var(--space-2);
+  background: var(--bg-elevated);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+.showAll {
+  justify-content: space-between;
+  color: var(--accent-text);
+  font-weight: 500;
+}
+.showAll:hover {
+  color: var(--accent-text);
+}
+
+.footer {
+  flex: none;
+  border-top: 1px solid var(--border);
+  padding: var(--space-2) 0;
+  margin-top: auto;
+}
+.settingsBtn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  height: 34px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--fs-base);
+  font-weight: 500;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.settingsBtn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.resizer {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 5;
+}
+.resizer:hover {
+  background: linear-gradient(to right, transparent, var(--accent) 50%, transparent);
+  opacity: 0.5;
+}

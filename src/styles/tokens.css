@@ -1,0 +1,145 @@
+/* ============================================================================
+   Notes design tokens — see DESIGN.md §2–4.
+   Components must reference ONLY these semantic tokens, never raw values.
+   Theme flips via [data-theme] on <html>.
+   ========================================================================== */
+
+:root {
+  /* ---- Typography ---- */
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --fs-xs: 0.6875rem;   /* 11 */
+  --fs-sm: 0.8125rem;   /* 13 */
+  --fs-base: 0.875rem;  /* 14 */
+  --fs-md: 1rem;        /* 16 */
+  --fs-lg: 1.25rem;     /* 20 */
+  --fs-xl: 1.625rem;    /* 26 */
+
+  --lh-ui: 1.5;
+  --lh-read: 1.7;
+
+  /* Editor font size, overridden at the editor root by user setting */
+  --editor-font-size: 1rem;
+  --editor-font: var(--font-ui);
+
+  /* ---- Spacing (4px grid) ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* ---- Radius ---- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-full: 999px;
+
+  /* ---- Motion ---- */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 260ms;
+
+  /* ---- Layout ---- */
+  --sidebar-width: 240px;
+  --tabbar-height: 40px;
+  --editor-max-width: 860px;
+  --z-modal: 1000;
+  --z-popover: 900;
+  --z-tooltip: 1100;
+}
+
+/* ---------------------------------------------------------------- LIGHT ---- */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #fafaf9;
+  --bg-elevated: #ffffff;
+  --bg-sunken: #f2f1ef;
+  --bg-hover: #f2f1ef;
+  --bg-active: #e7e5e4;
+  --border: #e7e5e4;
+  --border-strong: #d6d3d1;
+
+  --text: #1c1917;
+  --text-secondary: #57534e;
+  --text-tertiary: #a8a29e;
+  --text-inverse: #fafaf9;
+
+  --accent: #5b5bd6;
+  --accent-hover: #4e4ecc;
+  --accent-subtle: #eeeefb;
+  --accent-text: #4a4ac0;
+  /* Text selection — translucent accent so highlighted text stays legible. */
+  --selection: rgba(91, 91, 214, 0.22);
+
+  --danger: #dc2626;
+  --danger-subtle: #fef2f2;
+  --success: #16a34a;
+  --warning: #d97706;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.14), 0 4px 8px rgba(0, 0, 0, 0.06);
+
+  /* Sticky-note palette */
+  --note-default: #ffffff;
+  --note-yellow: #fef9c3;
+  --note-green: #dcfce7;
+  --note-blue: #dbeafe;
+  --note-pink: #fce7f3;
+  --note-purple: #ede9fe;
+  --note-orange: #ffedd5;
+  --note-gray: #f1f5f9;
+}
+
+/* ----------------------------------------------------------------- DARK ---- */
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #1a1917;
+  --bg-elevated: #232120;
+  --bg-sunken: #141312;
+  --bg-hover: #2b2927;
+  --bg-active: #332f2d;
+  --border: #332f2d;
+  --border-strong: #403b38;
+
+  --text: #fafaf9;
+  --text-secondary: #a8a29e;
+  --text-tertiary: #78716c;
+  --text-inverse: #1a1917;
+
+  --accent: #7c7cf0;
+  --accent-hover: #8e8ef5;
+  --accent-subtle: #262652;
+  --accent-text: #a5a5f7;
+  --selection: rgba(124, 124, 240, 0.40);
+
+  --danger: #f87171;
+  --danger-subtle: #3b1a1a;
+  --success: #4ade80;
+  --warning: #fbbf24;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55), 0 4px 8px rgba(0, 0, 0, 0.4);
+
+  --note-default: #232120;
+  --note-yellow: #3d3a1e;
+  --note-green: #1e3a2a;
+  --note-blue: #1e2e45;
+  --note-pink: #3e1e33;
+  --note-purple: #2e2547;
+  --note-orange: #3e2a18;
+  --note-gray: #2a2e33;
+}

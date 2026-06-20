@@ -1,0 +1,305 @@
+.home {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6) var(--space-4);
+  flex: none;
+}
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.title {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  font-size: var(--fs-sm);
+  color: var(--text-tertiary);
+}
+.crumbGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.crumb {
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  padding: 1px 4px;
+}
+.crumb:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+.crumbCurrent {
+  color: var(--text-secondary);
+  font-weight: 600;
+  padding: 1px 4px;
+}
+.crumbSep {
+  color: var(--text-tertiary);
+  flex: none;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: none;
+}
+.sortBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 30px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast);
+}
+.sortBtn:hover {
+  background: var(--bg-active);
+  color: var(--text);
+}
+
+/* Inline selection control, in the same row as the sort/layout controls. */
+.selControl {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-right: var(--space-3);
+  margin-right: var(--space-1);
+  border-right: 1px solid var(--border);
+}
+.selCount {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--accent-text);
+  white-space: nowrap;
+  margin-right: var(--space-1);
+}
+
+/* Single scroll surface for folders + notes (Explorer-style). */
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  /* No top padding: a sticky header (top:0) would otherwise leave a gap equal
+     to the scroll container's padding-top above it while scrolling. */
+  padding: 0 var(--space-6) var(--space-6);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+  margin: var(--space-2) 0 var(--space-2);
+}
+.sectionLabel {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.emptyFolders {
+  font-size: var(--fs-sm);
+  color: var(--text-tertiary);
+  padding: var(--space-1) 0 var(--space-2);
+}
+
+.folderSection {
+  display: flex;
+  flex-direction: column;
+}
+.folderGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-3);
+}
+.folderCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast);
+}
+.folderCard:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+.folderCardDrop {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.folderCardIcon {
+  color: var(--accent-text);
+  flex: none;
+}
+.folderCardName {
+  flex: 1;
+  font-size: var(--fs-base);
+  font-weight: 550;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.folderCardCount {
+  flex: none;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: var(--bg-sunken);
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+}
+.folderRenameInput {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-base);
+  font-weight: 550;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 1px 4px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-4);
+  align-content: start;
+  /* Top padding so the card hover-lift and selection ring aren't clipped. */
+  padding-top: var(--space-1);
+}
+
+/* Global search results — match context + keyboard navigation. */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: var(--space-1);
+}
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.result:hover {
+  background: var(--bg-hover);
+}
+.resultSel {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+}
+.resultSel:hover {
+  background: var(--accent-subtle);
+}
+.resultHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.resultIcon {
+  color: var(--text-tertiary);
+  flex: none;
+}
+.resultTitle {
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.resultFolder {
+  margin-left: auto;
+  flex: none;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  background: var(--bg-sunken);
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+}
+.resultSnippet {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.resultMark {
+  background: rgba(250, 204, 21, 0.4);
+  color: inherit;
+  border-radius: 2px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--space-1);
+}
+.listHead {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 120px 92px 92px;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 1;
+}
+@media (max-width: 760px) {
+  .listHead {
+    grid-template-columns: 12px minmax(0, 1fr) 92px;
+  }
+  .listHead span:nth-child(3),
+  .listHead span:nth-child(4) {
+    display: none;
+  }
+}

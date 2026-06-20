@@ -1,0 +1,24 @@
+.track {
+  width: 38px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--bg-active);
+  padding: 2px;
+  flex: none;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.on {
+  background: var(--accent);
+}
+.thumb {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.on .thumb {
+  transform: translateX(16px);
+}

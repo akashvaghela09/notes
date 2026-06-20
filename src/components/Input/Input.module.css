@@ -1,0 +1,34 @@
+.input {
+  width: 100%;
+  height: 34px;
+  padding: 0 var(--space-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: var(--fs-base);
+  transition: border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+.input::placeholder {
+  color: var(--text-tertiary);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+
+.bare {
+  background: transparent;
+  border-color: transparent;
+  height: 100%;
+}
+/* Bare inputs never change appearance on focus — the container owns the chrome. */
+.bare:focus,
+.bare:focus-visible {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  outline: none;
+}

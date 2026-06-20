@@ -1,0 +1,206 @@
+.editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+.toolbarActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 var(--space-2);
+  background: var(--border);
+  flex: none;
+}
+
+/* In-note find bar */
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+.searchIcon {
+  color: var(--text-tertiary);
+  flex: none;
+}
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: var(--fs-sm);
+}
+.searchInput:focus {
+  outline: none;
+}
+.searchCount {
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  min-width: 56px;
+  text-align: right;
+}
+
+.colorWrap {
+  position: relative;
+  display: inline-flex;
+}
+.colorPopover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: var(--z-popover);
+  padding: var(--space-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  width: 156px;
+}
+
+.surface {
+  flex: 1;
+  overflow-y: auto;
+  /* Block scroller (not flex) composites scrolling more smoothly. */
+}
+.column {
+  width: 100%;
+  max-width: var(--editor-max-width);
+  margin: 0 auto; /* centered in focus mode; full width when .wide */
+  /* Modest bottom space so the last line clears the status bar when you type
+     at the end. It's only visible at the very bottom; scrolling up shows full
+     content. */
+  padding: var(--space-6) var(--space-6) 14vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+/* Focus mode off → full editor width like a normal text editor, with tighter
+   horizontal padding so the text runs close to the right-edge scrollbar. */
+.wide {
+  max-width: none;
+  padding-left: var(--space-4);
+  padding-right: var(--space-4);
+}
+
+/* CSS auto-sizer: the sizer, backdrop, and textarea share one grid cell. The
+   sizer (full text) sets the cell height, so the textarea grows with content
+   without any JS measurement — the .surface remains the only scroller. */
+.editArea {
+  display: grid;
+  width: 100%;
+}
+.editArea > * {
+  grid-area: 1 / 1 / 2 / 2;
+}
+.sizer,
+.body,
+.backdrop {
+  font-family: var(--editor-font);
+  font-size: var(--editor-font-size);
+  line-height: var(--lh-read);
+  min-height: 70vh;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+  padding: 0;
+  border: none;
+  width: 100%;
+}
+.sizer {
+  visibility: hidden;
+  pointer-events: none;
+}
+.body {
+  overflow: hidden; /* grows via the grid; the .surface scrolls */
+  resize: none;
+  color: var(--text);
+  background: none;
+  z-index: 1;
+}
+.body::placeholder {
+  color: var(--text-tertiary);
+}
+/* While searching, the text layer goes transparent so the highlight backdrop
+   shows through; the caret stays visible. */
+.bodyTransparent {
+  color: transparent;
+  caret-color: var(--text);
+}
+
+/* Highlight backdrop: mirrors the textarea text exactly, beneath it. */
+.backdrop {
+  z-index: 0;
+  color: var(--text);
+  pointer-events: none;
+  user-select: none;
+}
+/* Keep the bold first line consistent across all three layers so the sizer
+   height and highlight positions line up with the textarea. */
+.sizer::first-line,
+.body::first-line,
+.backdrop::first-line {
+  font-weight: 700;
+}
+.mark {
+  background: rgba(250, 204, 21, 0.32);
+  color: inherit;
+  border-radius: 2px;
+}
+.markActive {
+  background: rgba(234, 179, 8, 0.85);
+  color: inherit;
+  border-radius: 2px;
+}
+/* No focus ring on the writing surface — a border there is distracting. */
+.body:focus,
+.body:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+/* The first line reads as the title without a separate field. */
+.body::first-line {
+  font-weight: 700;
+}
+.preview {
+  font-family: var(--editor-font);
+  font-size: var(--editor-font-size);
+}
+
+.statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-1) var(--space-3);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  flex: none;
+}
+.statusLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.wordCount {
+  white-space: nowrap;
+}

@@ -1,0 +1,33 @@
+.wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Portaled to <body> with fixed positioning, so it never affects any scroll
+   container's overflow. `left`/`top` are set inline from the anchor's rect. */
+.tip {
+  position: fixed;
+  z-index: var(--z-tooltip);
+  background: var(--text);
+  color: var(--bg-elevated);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: var(--shadow-md);
+  animation: fade var(--dur-fast) var(--ease-out);
+}
+.bottom {
+  transform: translateX(-50%);
+}
+.top {
+  transform: translateX(-50%) translateY(-100%);
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}

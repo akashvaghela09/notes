@@ -1,0 +1,111 @@
+.row {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 120px 92px 92px;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  user-select: none; /* drag starts a drag, not a text selection */
+  transition: background var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast);
+}
+.row:hover {
+  background: var(--bg-hover);
+}
+.selected {
+  background: var(--accent-subtle);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.selected:hover {
+  background: var(--accent-subtle);
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+/* Only show the checkbox outline while multi-selecting — the leading cell is
+   just a color dot by default. */
+.checkboxVisible.checkbox:not(.checked) {
+  outline: 1.5px solid var(--border-strong);
+}
+.checkboxVisible.checkbox:hover {
+  outline: 1.5px solid var(--border-strong);
+}
+.checked {
+  background: var(--accent);
+}
+.colorDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.titleLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.pin {
+  color: var(--accent-text);
+  flex: none;
+}
+.title {
+  font-size: var(--fs-base);
+  font-weight: 550;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.preview {
+  font-size: var(--fs-sm);
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warning);
+  flex: none;
+}
+
+.cell {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.folder {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 760px) {
+  .row {
+    grid-template-columns: 12px minmax(0, 1fr) 92px;
+  }
+  .folder {
+    display: none;
+  }
+  .cell:nth-child(4) {
+    display: none;
+  }
+}

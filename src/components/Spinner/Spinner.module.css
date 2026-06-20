@@ -1,0 +1,9 @@
+.spin {
+  color: var(--text-tertiary);
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

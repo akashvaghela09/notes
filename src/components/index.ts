@@ -1,0 +1,25 @@
+// Barrel for reusable presentational components. Import from '@/components'.
+export { Button } from './Button/Button';
+export type { ButtonProps, ButtonVariant, ButtonSize } from './Button/Button';
+export { IconButton } from './IconButton/IconButton';
+export { Input } from './Input/Input';
+export { Modal } from './Modal/Modal';
+export { ConfirmDialog } from './ConfirmDialog/ConfirmDialog';
+export type { ConfirmConfig } from './ConfirmDialog/ConfirmDialog';
+export { Menu } from './Menu/Menu';
+export type { MenuItem } from './Menu/Menu';
+export { ContextMenu } from './ContextMenu/ContextMenu';
+export type { ContextMenuState } from './ContextMenu/ContextMenu';
+export { Tooltip } from './Tooltip/Tooltip';
+export { Segmented } from './Segmented/Segmented';
+export type { SegmentOption } from './Segmented/Segmented';
+export { Switch } from './Switch/Switch';
+export { Badge } from './Badge/Badge';
+export { SaveStatePill } from './Pill/SaveStatePill';
+export { EmptyState } from './EmptyState/EmptyState';
+export { Spinner } from './Spinner/Spinner';
+export { ColorPicker } from './ColorSwatch/ColorPicker';
+export { MarkdownView } from './Markdown/MarkdownViewLazy';
+export { StickyNote } from './NoteCard/StickyNote';
+export { NoteListRow } from './NoteCard/NoteListRow';
+export { SidebarItem } from './Sidebar/SidebarItem';

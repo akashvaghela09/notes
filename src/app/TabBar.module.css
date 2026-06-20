@@ -1,0 +1,137 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--tabbar-height);
+  flex: none;
+  padding: 0 var(--space-2);
+  background: var(--bg-sunken);
+  border-bottom: 1px solid var(--border);
+  user-select: none;
+}
+
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 30px;
+  max-width: 180px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  position: relative;
+  flex: none;
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.tab:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.active {
+  background: var(--bg-elevated);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+.active::after {
+  content: '';
+  position: absolute;
+  left: var(--space-3);
+  right: var(--space-3);
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.homeTab {
+  width: 36px;
+  padding: 0;
+  justify-content: center;
+}
+
+.tabTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dirtyDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--warning);
+  flex: none;
+}
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  flex: none;
+  opacity: 0.6;
+  transition: background var(--dur-fast) var(--ease-out), opacity var(--dur-fast);
+}
+.close:hover {
+  background: var(--bg-active);
+  color: var(--text);
+  opacity: 1;
+}
+
+.newBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  flex: none;
+  margin-right: var(--space-1);
+}
+.newBtn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.newBtn:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Placeholder tab shown while SQLite connects on launch. */
+.tabSkeleton {
+  width: 64px;
+  height: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  animation: tabSkelPulse 1.4s ease-in-out infinite;
+}
+@keyframes tabSkelPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.9; }
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}

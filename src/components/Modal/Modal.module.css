@@ -1,0 +1,77 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  animation: overlayIn var(--dur-base) var(--ease-out);
+}
+
+.dialog {
+  width: 100%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  overflow: hidden; /* clip children (e.g. the settings nav) to the rounded corners */
+  animation: dialogIn var(--dur-slow) var(--ease-out);
+}
+.sm {
+  max-width: 400px;
+}
+.md {
+  max-width: 560px;
+}
+.lg {
+  max-width: 720px;
+}
+.xl {
+  max-width: 940px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+.title {
+  font-size: var(--fs-lg);
+  font-weight: 650;
+  letter-spacing: -0.011em;
+}
+.body {
+  padding: var(--space-5);
+  overflow-y: auto;
+}
+.bodyFlush {
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes dialogIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}

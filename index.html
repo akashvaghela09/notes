@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Notes</title>
+    <script>
+      // Resolve and apply the theme BEFORE first paint, so there's no flash
+      // between the loader and the app. Reads the saved preference mirrored to
+      // localStorage (see hooks/useTheme); falls back to the OS setting. React
+      // later reconciles with the SQLite-stored preference.
+      (function () {
+        var pref;
+        try { pref = localStorage.getItem('notes:theme'); } catch (e) {}
+        var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var resolved = pref === 'light' || pref === 'dark' ? pref : (dark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', resolved);
+      })();
+    </script>
+    <style>
+      /* Pre-React boot styling. Inline so it paints with the document — before
+         the JS bundle and app CSS load — eliminating the white flash. Colors
+         mirror the design tokens and follow the data-theme set above, so the
+         loader matches what the app will render. React replaces #root on first
+         render, which removes the loader automatically. */
+      html { background: #fafaf9; }
+      html[data-theme='dark'] { background: #1a1917; }
+      #initial-loader {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fafaf9;
+        animation: il-fade 240ms ease-out;
+      }
+      html[data-theme='dark'] #initial-loader { background: #1a1917; }
+      #initial-loader .il-bar {
+        width: 180px;
+        height: 3px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+      }
+      html[data-theme='dark'] #initial-loader .il-bar { background: rgba(255, 255, 255, 0.1); }
+      #initial-loader .il-fill {
+        height: 100%;
+        width: 40%;
+        border-radius: inherit;
+        background: #5b5bd6;
+        animation: il-slide 1.05s ease-in-out infinite;
+      }
+      html[data-theme='dark'] #initial-loader .il-fill { background: #7c7cf0; }
+      @keyframes il-slide {
+        0% { transform: translateX(-130%); }
+        100% { transform: translateX(330%); }
+      }
+      @keyframes il-fade {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="root">
+      <div id="initial-loader" aria-hidden="true">
+        <div class="il-bar"><div class="il-fill"></div></div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
