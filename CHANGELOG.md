@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Slate are documented here.
+All notable changes to Notes are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); this project
 uses [Semantic Versioning](https://semver.org/).
 
@@ -38,7 +38,7 @@ uses [Semantic Versioning](https://semver.org/).
 
 ### Added — Project foundation (0.1.0 scaffold)
 - **Tooling:** Tauri v2 + React 19 + TypeScript + Vite project scaffolded for
-  Linux desktop. Renamed to **Slate** (`com.akash.slate`), window 1200×800
+  Linux desktop. Named **Notes** (`com.akash.notes`), window 1200×800
   (min 720×480).
 - **Persistence:** `tauri-plugin-sql` (SQLite) registered with versioned
   migrations. Initial schema `0001_initial.sql` with tables: `folders`,

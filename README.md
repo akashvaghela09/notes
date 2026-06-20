@@ -144,7 +144,7 @@ This means rebuilding, updating, or reinstalling the application will never affe
 Example Linux location:
 
 ```text
-~/.config/com.akash.slate/notes.db
+~/.config/com.akash.notes/notes.db
 ```
 
 To reset the application:

@@ -19,7 +19,7 @@
     "sql:default",
     {
       "identifier": "sql:allow-execute",
-      "allow": [{ "path": "sqlite:slate.db" }]
+      "allow": [{ "path": "sqlite:notes.db" }]
     }
   ]
 }

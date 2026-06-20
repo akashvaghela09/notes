@@ -1,4 +1,4 @@
-# Slate — Design System & UX Guideline
+# Notes — Design System & UX Guideline
 
 > A fast, minimal, local-first notes app for Linux desktop.
 > This document is the **single source of truth** for visual + interaction design.
@@ -9,7 +9,7 @@
 
 ## 1. Design philosophy
 
-Slate is a **calm, content-first writing tool**. The chrome disappears; the words
+Notes is a **calm, content-first writing tool**. The chrome disappears; the words
 are the interface. Three principles govern every decision:
 
 1. **Content is the hero.** Maximum ink for the user's text, minimum ink for our
@@ -271,7 +271,7 @@ button requiring confirmation.
 
 ## 7. The Draft / Save model (critical UX)
 
-This is Slate's signature interaction. It must be implemented exactly.
+This is Notes' signature interaction. It must be implemented exactly.
 
 ### States per open note
 
