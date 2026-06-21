@@ -18,6 +18,7 @@ export { Badge } from './Badge/Badge';
 export { SaveStatePill } from './Pill/SaveStatePill';
 export { EmptyState } from './EmptyState/EmptyState';
 export { Spinner } from './Spinner/Spinner';
+export { ListeningIndicator } from './ListeningIndicator/ListeningIndicator';
 export { ColorPicker } from './ColorSwatch/ColorPicker';
 export { MarkdownView } from './Markdown/MarkdownViewLazy';
 export { StickyNote } from './NoteCard/StickyNote';

@@ -286,7 +286,7 @@ export function Sidebar() {
         message={
           pendingDelete
             ? pendingDelete.count > 0
-              ? `"${pendingDelete.folder.name}" and its subfolders will be deleted. The ${pendingDelete.count} note(s) inside will move to your default folder — they won’t be deleted.`
+              ? `"${pendingDelete.folder.name}" and its subfolders will be deleted. The ${pendingDelete.count} note(s) inside will move to your default folder; they won’t be deleted.`
               : `Delete the empty folder "${pendingDelete.folder.name}"?`
             : ''
         }

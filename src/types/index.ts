@@ -67,6 +67,20 @@ export interface SortPref {
   dir: SortDir;
 }
 
+// ---- Speech-to-text -------------------------------------------------------
+
+/** A Whisper model in the catalog, with on-disk install status (from Rust). */
+export interface SttModelInfo {
+  id: string;
+  label: string;
+  sizeBytes: number;
+  downloaded: boolean;
+  lang: 'en' | 'multi';
+}
+
+/** Lifecycle of a dictation session, mirrored from the Rust `stt://state` event. */
+export type SttState = 'idle' | 'starting' | 'listening' | 'transcribing' | 'error';
+
 export interface Settings {
   theme: ThemePref;
   markdownEnabled: boolean;
@@ -89,4 +103,8 @@ export interface Settings {
   sidebarWidth: number;
   /** Folder every orphan note falls back to; auto-created on first run. */
   defaultFolderId: string | null;
+  /** Master switch for offline speech-to-text (dictation). */
+  sttEnabled: boolean;
+  /** Catalog id of the Whisper model used for recognition (null = none chosen). */
+  sttModel: string | null;
 }

@@ -28,6 +28,25 @@
   flex: none;
 }
 
+/* Dictation model picker trigger in the toolbar (styled, not a native select). */
+.sttModel {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 30px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.sttModel:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
 /* In-note find bar */
 .searchBar {
   display: flex;

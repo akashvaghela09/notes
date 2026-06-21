@@ -5,6 +5,8 @@
 // across releases. Keep migrations append-only: never edit a shipped migration,
 // always add a new one.
 
+mod stt;
+
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 fn migrations() -> Vec<Migration> {
@@ -35,6 +37,16 @@ pub fn run() {
                 .add_migrations("sqlite:notes.db", migrations())
                 .build(),
         )
+        .manage(stt::SttManager::default())
+        .invoke_handler(tauri::generate_handler![
+            stt::stt_list_models,
+            stt::stt_capabilities,
+            stt::stt_status,
+            stt::stt_download_model,
+            stt::stt_delete_model,
+            stt::stt_start,
+            stt::stt_stop,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
