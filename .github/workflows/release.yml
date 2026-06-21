@@ -1,11 +1,13 @@
 name: Release
 
-# Build installers for macOS, Windows, and Linux and publish them to a
-# GitHub Release whenever a v* tag is pushed (e.g. v0.1.0).
+# Build installers for macOS, Windows, and Linux. A v* tag push (e.g. v1.2.1)
+# builds AND publishes a draft GitHub Release; a manual "Run workflow"
+# (workflow_dispatch) only builds — useful to verify CI before tagging.
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   release:
@@ -22,8 +24,10 @@ jobs:
         include:
           - platform: 'macos-latest' # Apple Silicon
             args: '--target aarch64-apple-darwin -- --no-default-features'
+            deploymentTarget: '11.0'
           - platform: 'macos-latest' # Intel
             args: '--target x86_64-apple-darwin -- --no-default-features'
+            deploymentTarget: '10.15'
           - platform: 'ubuntu-22.04'
             args: '-- --no-default-features'
           - platform: 'windows-latest'
@@ -78,9 +82,14 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # whisper.cpp uses std::filesystem, which Apple's libc++ marks
+          # unavailable below macOS 10.15. Empty on Linux/Windows (ignored).
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.deploymentTarget }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'Notes ${{ github.ref_name }}'
+          # On a manual run (not a tag) these are empty, so tauri-action only
+          # builds and skips creating a release.
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          releaseName: ${{ github.ref_type == 'tag' && format('Notes {0}', github.ref_name) || '' }}
           releaseBody: 'See the assets below to download and install Notes.'
           releaseDraft: true
           prerelease: false
