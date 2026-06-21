@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Required so macOS lets the app open the microphone for offline
+       speech-to-text. The Tauri macOS bundler merges this into the generated
+       Info.plist. -->
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Notes uses the microphone for offline speech-to-text dictation.</string>
+</dict>
+</plist>

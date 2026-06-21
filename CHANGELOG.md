@@ -4,6 +4,46 @@ All notable changes to Notes are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); this project
 uses [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-06-21
+
+### Added — Offline speech-to-text (dictation)
+- **Local Whisper dictation, fully offline.** Speech recognition runs on-device
+  via whisper.cpp (the `whisper-rs` crate) with continuous streaming and
+  energy-based voice-activity detection. No audio leaves the machine.
+- **Live, interim transcription.** Text appears as you speak (interim results
+  refresh ~3x/second and are committed as one undo step per utterance), with a
+  long silence window so natural pauses don't chop a sentence.
+- **Model manager** in Settings → Speech: a master enable toggle, plus per-model
+  Download / Installed state, a delete (trash) action, and a download progress
+  bar. Models: Tiny / Base / Small / Medium (English) and Small (multilingual),
+  fetched once from the public ggerganov/whisper.cpp repo into the app data dir.
+- **GPU acceleration (Vulkan)** with automatic best-device selection: prefers a
+  discrete GPU, enables NVIDIA PRIME render-offload on hybrid laptops, never the
+  CPU/lavapipe software driver, and falls back to CPU when no GPU is available.
+  The active backend/device is shown in Settings.
+- **Toolbar dictation section** (just before Settings, shown only when enabled
+  with a model installed): a styled model picker dropdown (downloaded models
+  only) and a mic toggle. Switching the model restarts a live session so it
+  applies immediately.
+- **Shortcuts:** `Ctrl/Cmd+Space` starts/stops dictation in the current note (or
+  a new one); `Ctrl/Cmd+Shift+Space` dictates into a fresh note. Listed in
+  Settings → Shortcuts.
+- **Listening indicator:** a floating, animated overlay with a close button so
+  the live microphone is always visible (not just a toggle state).
+- **Voice commands** (recognized only as a whole, deliberately-paused phrase):
+  "new line" / "next line", "new paragraph", and "delete" (removes the last
+  sentence). The same words spoken inside a sentence are dictated as text.
+
+### Changed
+- Version bumped to **1.2.0**; About now reflects the real app version.
+- Removed all em-dashes from user-facing UI copy.
+
+### CI / Build
+- Release workflow now installs the whisper.cpp / cpal build prerequisites
+  (cmake, libclang, ALSA on Linux) and builds **CPU-only** portable installers
+  via `--no-default-features` (no Vulkan/CUDA runtime required to run them). The
+  GPU build remains the local default; see `GIT.md`.
+
 ## [Unreleased]
 
 ### Changed — UX iteration (feedback round 1)

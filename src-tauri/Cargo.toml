@@ -1,6 +1,6 @@
 [package]
 name = "notes"
-version = "1.1.0"
+version = "1.2.0"
 description = "Notes — a fast, minimal, local-first notes app"
 authors = ["Akash"]
 edition = "2021"
@@ -25,3 +25,25 @@ tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+# Speech-to-text (offline, local). whisper-rs bundles & compiles whisper.cpp via
+# cmake at build time — the build host needs cmake + a C/C++ compiler, and Linux
+# needs libasound2-dev (for cpal). The GPU backend is selected via this crate's
+# own `gpu` feature (see [features] below), not here.
+whisper-rs = { version = "0.16" }
+cpal = "0.15"
+ringbuf = "0.4"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream"] }
+futures-util = "0.3"
+# Minimal Vulkan bindings — used only to enumerate GPUs and pick the best one
+# (discrete over integrated, never the CPU/lavapipe driver) for whisper.cpp.
+# `loaded` dlopens libvulkan at runtime (no extra compile-time link).
+ash = { version = "0.38", default-features = false, features = ["loaded"] }
+
+[features]
+# Default build ships GPU acceleration via Vulkan (works on NVIDIA/AMD/Intel and
+# falls back to CPU at runtime when no GPU is present — see stt::load_context).
+# Build deps: libvulkan-dev + a shader compiler (glslc / glslang-tools).
+# For a pure-CPU build with no Vulkan dependency: `--no-default-features`.
+default = ["gpu"]
+gpu = ["whisper-rs/vulkan"]

@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   Pin, Palette, Download, Eye, Pencil, FolderInput, FileText, FileType, Printer,
   Save, AlignCenter, AlignJustify, Plus, FileUp, CopyPlus, Clipboard, Search,
   Undo2, Redo2, PanelLeft, PanelLeftClose, ArrowUp, ArrowDown, X, Settings,
+  Mic, MicOff, ChevronDown, Check,
 } from 'lucide-react';
 import type { Note } from '../../types';
 import { useNotesStore } from '../../store/useNotesStore';
@@ -12,6 +13,7 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import { useTabsStore } from '../../store/useTabsStore';
 import { useUIStore } from '../../store/useUIStore';
 import { useBootStore } from '../../store/useBootStore';
+import { useSttStore, isSttActive } from '../../store/useSttStore';
 import { useDraft } from '../../hooks/useDraft';
 import { useHotkeys } from '../../hooks/useHotkeys';
 import { exportAsText, exportAsMarkdown, importTextFile } from '../../utils/export';
@@ -43,6 +45,57 @@ function highlightNodes(text: string, matches: number[], len: number, activeStar
   return nodes;
 }
 
+// ---- Voice commands -------------------------------------------------------
+// Spoken commands recognized only when a *whole* finalized utterance equals the
+// phrase (the user deliberately pauses to say it). The same words spoken inside
+// a sentence are just dictated as text.
+type VoiceCommand = 'newline' | 'paragraph' | 'clearSentence';
+
+const VOICE_COMMANDS: Record<string, VoiceCommand> = {
+  'new line': 'newline',
+  'newline': 'newline',
+  'next line': 'newline',
+  'new paragraph': 'paragraph',
+  'next paragraph': 'paragraph',
+  'delete': 'clearSentence',
+};
+
+/** Match a finalized transcript to a command, or null. Whole-segment only. */
+function matchVoiceCommand(text: string): VoiceCommand | null {
+  const norm = text.toLowerCase().trim().replace(/[.,!?;:'"]+$/g, '').replace(/\s+/g, ' ').trim();
+  return VOICE_COMMANDS[norm] ?? null;
+}
+
+/** Index in `text` where the last sentence begins (after the prior terminator). */
+function lastSentenceStart(text: string): number {
+  const t = text.replace(/\s+$/, '');
+  if (!t) return 0;
+  const core = t.replace(/[.!?]+$/, ''); // ignore the terminator closing this sentence
+  let idx = -1;
+  for (let i = core.length - 1; i >= 0; i--) {
+    const c = core[i];
+    if (c === '.' || c === '!' || c === '?' || c === '\n') { idx = i; break; }
+  }
+  let start = idx + 1;
+  while (start < t.length && /\s/.test(t[start])) start++;
+  return start;
+}
+
+/** Apply a voice command to a (before-caret, after-caret) split. */
+function applyCommandToText(before: string, after: string, cmd: VoiceCommand): { next: string; caret: number } {
+  if (cmd === 'newline') {
+    const b = before.replace(/[ \t]+$/, '');
+    return { next: `${b}\n${after}`, caret: b.length + 1 };
+  }
+  if (cmd === 'paragraph') {
+    const b = before.replace(/\s+$/, '');
+    return { next: `${b}\n\n${after}`, caret: b.length + 2 };
+  }
+  // clearSentence
+  const b = before.slice(0, lastSentenceStart(before)).replace(/[ \t]+$/, '');
+  return { next: b + after, caret: b.length };
+}
+
 export function Editor({ note, seedContent }: { note: Note; seedContent?: string }) {
   const draft = useDraft(note, seedContent);
   const { content, setContent, commit } = draft;
@@ -65,6 +118,19 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
   const sidebarCollapsed = settings.sidebarCollapsed;
 
   const clearBootContent = useBootStore((s) => s.clearBootContent);
+
+  // Speech-to-text: the toolbar mic shows only when the feature is on AND a
+  // model is installed. The session status drives the active/toggle state.
+  const sttEnabled = settings.sttEnabled;
+  const sttModels = useSttStore((s) => s.models);
+  const sttActive = useSttStore((s) => isSttActive(s.session.status));
+  const registerSink = useSttStore((s) => s.registerSink);
+  const clearSink = useSttStore((s) => s.clearSink);
+  // Downloaded models drive the toolbar dropdown; the active one is the chosen
+  // model (or the first installed if the chosen one isn't downloaded).
+  const downloadedModels = sttModels.filter((m) => m.downloaded);
+  const activeModel = downloadedModels.find((m) => m.id === settings.sttModel) ?? downloadedModels[0];
+  const showMic = sttEnabled && downloadedModels.length > 0;
 
   const [preview, setPreview] = useState(false);
   const [colorOpen, setColorOpen] = useState(false);
@@ -157,6 +223,117 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
     setContent(v);
   };
 
+  // Dictation inserts text into the textarea live. While an utterance is in
+  // progress its interim text occupies a tracked region [start, start+len] that
+  // gets replaced as Whisper refines it (like IME composition); the final result
+  // is committed to the draft as a single undo step. partialStart === null means
+  // no utterance is open. The region is DOM-only until commit, so interim words
+  // don't flood the undo history or autosave.
+  const partialStart = useRef<number | null>(null);
+  const partialLen = useRef(0);
+
+  const applyTranscript = useCallback(
+    (text: string, isFinal: boolean) => {
+      const piece = text.trim();
+      const el = bodyRef.current;
+
+      // Whole-segment voice command (e.g. a deliberately-paused "new line").
+      // Revert any interim text from THIS utterance, then run the action instead
+      // of inserting the words.
+      if (isFinal) {
+        const cmd = matchVoiceCommand(piece);
+        if (cmd) {
+          if (el && !preview) {
+            if (partialStart.current !== null) {
+              const s = Math.min(partialStart.current, el.value.length);
+              const e = Math.min(s + partialLen.current, el.value.length);
+              el.value = el.value.slice(0, s) + el.value.slice(e);
+              el.setSelectionRange(s, s);
+            }
+            partialStart.current = null;
+            partialLen.current = 0;
+            const caret = el.selectionStart ?? el.value.length;
+            const { next, caret: nc } = applyCommandToText(el.value.slice(0, caret), el.value.slice(caret), cmd);
+            el.value = next;
+            el.setSelectionRange(nc, nc);
+            el.focus();
+            if (sizerRef.current) sizerRef.current.textContent = next + '\n';
+            setContent(next);
+          } else {
+            partialStart.current = null;
+            partialLen.current = 0;
+            const { next } = applyCommandToText(content, '', cmd);
+            setContent(next);
+          }
+          return;
+        }
+      }
+
+      // No live textarea (markdown preview): drop interim state; append finals.
+      if (!el || preview) {
+        partialStart.current = null;
+        partialLen.current = 0;
+        if (isFinal && piece) {
+          const sep = content && !/\s$/.test(content) ? ' ' : '';
+          setContent(content + sep + piece);
+        }
+        return;
+      }
+
+      // Nothing to show yet and no open region — wait for real words.
+      if (!piece && partialStart.current === null) return;
+
+      // Open a fresh region at the caret, inserting a separator if needed.
+      if (partialStart.current === null) {
+        const caret = el.selectionStart ?? el.value.length;
+        const before = el.value.slice(0, caret);
+        const sep = before && !/\s$/.test(before) ? ' ' : '';
+        if (sep) el.value = before + sep + el.value.slice(caret);
+        partialStart.current = caret + sep.length;
+        partialLen.current = 0;
+      }
+
+      // Replace the region's previous text with the latest recognition.
+      const start = Math.min(partialStart.current, el.value.length);
+      const prevEnd = Math.min(start + partialLen.current, el.value.length);
+      const next = el.value.slice(0, start) + piece + el.value.slice(prevEnd);
+      el.value = next;
+      partialLen.current = piece.length;
+      const caret = start + piece.length;
+      el.setSelectionRange(caret, caret);
+      el.focus();
+      if (sizerRef.current) sizerRef.current.textContent = next + '\n';
+
+      if (isFinal) {
+        partialStart.current = null;
+        partialLen.current = 0;
+        setContent(next); // one undo step per utterance; triggers autosave
+      }
+    },
+    [content, preview, setContent],
+  );
+
+  // Route transcripts to whichever editor is active. A ref keeps the registered
+  // sink stable across re-renders while always calling the latest handler.
+  const sinkRef = useRef(applyTranscript);
+  sinkRef.current = applyTranscript;
+  useEffect(() => {
+    const sink = (text: string, isFinal: boolean) => sinkRef.current(text, isFinal);
+    registerSink(sink);
+    return () => clearSink(sink);
+  }, [note.id, registerSink, clearSink]);
+
+  // Safety net: if a session ends with interim text still uncommitted (e.g. an
+  // error or abrupt stop with no final), commit the current textarea value so
+  // the spoken words aren't lost, and clear the region.
+  useEffect(() => {
+    if (sttActive || partialStart.current === null) return;
+    partialStart.current = null;
+    partialLen.current = 0;
+    const el = bodyRef.current;
+    if (el) setContent(el.value);
+  }, [sttActive, setContent]);
+
   // Word count is O(n); recompute it a beat after typing stops, not per keystroke.
   const [words, setWords] = useState(() => wordCount(note.content));
   useEffect(() => {
@@ -221,6 +398,13 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
     { label: 'Markdown (.md)', icon: <FileType size={15} />, onClick: () => void exportAsMarkdown(displayName, content) },
     { label: 'PDF (print)', icon: <Printer size={15} />, separated: true, onClick: printPdf },
   ];
+
+  // Dictation model picker — only downloaded models, current one checked.
+  const sttModelItems: MenuItem[] = downloadedModels.map((m) => ({
+    label: m.label,
+    icon: activeModel?.id === m.id ? <Check size={15} /> : undefined,
+    onClick: () => void useSttStore.getState().setModel(m.id),
+  }));
 
   const onNewNote = async () => {
     const n = await createNote({ folderId: note.folderId });
@@ -292,6 +476,31 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
           </div>
           {moveItems.length > 0 && (
             <Menu trigger={<IconButton label="Move to folder"><FolderInput size={17} /></IconButton>} items={moveItems} align="left" />
+          )}
+
+          {/* Dictation: model picker + mic toggle. Only when enabled and a model
+              is installed. Sits as its own section just before Settings. */}
+          {showMic && (
+            <>
+              <span className={styles.divider} />
+              <Menu
+                trigger={
+                  <button className={styles.sttModel} title="Dictation model">
+                    {activeModel?.id ?? 'model'}
+                    <ChevronDown size={13} />
+                  </button>
+                }
+                items={sttModelItems}
+                align="left"
+              />
+              <IconButton
+                label={sttActive ? 'Stop dictation' : 'Dictate (Ctrl+Space)'}
+                active={sttActive}
+                onClick={() => void useSttStore.getState().toggleSession({ newNote: false })}
+              >
+                {sttActive ? <MicOff size={17} /> : <Mic size={17} />}
+              </IconButton>
+            </>
           )}
 
           <span className={styles.divider} />

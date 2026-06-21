@@ -8,11 +8,13 @@ import { useNotesStore } from './store/useNotesStore';
 import { useTabsStore } from './store/useTabsStore';
 import { useUIStore } from './store/useUIStore';
 import { useBootStore } from './store/useBootStore';
+import { useSttStore, initStt } from './store/useSttStore';
 import { loadAll, startFreshNote } from './store/bootstrap';
 import { useTheme } from './hooks/useTheme';
 import { useHotkeys } from './hooks/useHotkeys';
 import { clampFontPx } from './lib/constants';
 import { mark } from './utils/perf';
+import { ListeningIndicator } from './components';
 import styles from './App.module.css';
 
 export default function App() {
@@ -43,9 +45,19 @@ export default function App() {
   useEffect(() => {
     if (booted.current) return; // StrictMode double-invoke / re-render guard
     booted.current = true;
+    // Wire speech-to-text event listeners once (cheap — no native init).
+    initStt();
     mark('boot:loadAll-start');
     void loadAll()
       .then(() => mark('boot:data-loaded'))
+      .then(() => {
+        // Only touch the speech backend when the feature is enabled, so a user
+        // who never turns it on pays nothing (no model scan, no GPU/Vulkan init).
+        if (useSettingsStore.getState().settings.sttEnabled) {
+          void useSttStore.getState().loadCapabilities();
+          void useSttStore.getState().loadModels();
+        }
+      })
       .then(startFreshNote)
       .then(() => {
         mark('boot:note-ready');
@@ -85,6 +97,11 @@ export default function App() {
         },
       },
       { key: ',', handler: (e: KeyboardEvent) => { e.preventDefault(); openSettings(); } },
+      // Dictation: Ctrl/Cmd+Space toggles in the current note (or a new one);
+      // Ctrl/Cmd+Shift+Space always starts in a fresh note. Both no-op silently
+      // when the feature is off or no model is installed (handled in the store).
+      { key: ' ', handler: (e: KeyboardEvent) => { e.preventDefault(); void useSttStore.getState().toggleSession({ newNote: false }); } },
+      { key: ' ', shift: true, handler: (e: KeyboardEvent) => { e.preventDefault(); void useSttStore.getState().startSession({ newNote: true }); } },
       { key: '\\', handler: (e: KeyboardEvent) => { e.preventDefault(); void update('sidebarCollapsed', !sidebarCollapsed); } },
       // Continuous editor font sizing: Ctrl/Cmd+Shift+Plus / Minus
       { key: '+', shift: true, handler: (e: KeyboardEvent) => { e.preventDefault(); void bumpFont(1); } },
@@ -105,6 +122,7 @@ export default function App() {
         <Workspace />
       </div>
       <SettingsModal />
+      <ListeningIndicator />
     </>
   );
 }

@@ -14,15 +14,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Release installers are built CPU-only (--no-default-features) so they
+        # run anywhere without a Vulkan/CUDA runtime. The GPU build is the local
+        # default; see GIT.md.
         include:
           - platform: 'macos-latest' # Apple Silicon
-            args: '--target aarch64-apple-darwin'
+            args: '--target aarch64-apple-darwin --no-default-features'
           - platform: 'macos-latest' # Intel
-            args: '--target x86_64-apple-darwin'
+            args: '--target x86_64-apple-darwin --no-default-features'
           - platform: 'ubuntu-22.04'
-            args: ''
+            args: '--no-default-features'
           - platform: 'windows-latest'
-            args: ''
+            args: '--no-default-features'
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -36,7 +39,20 @@ jobs:
             libwebkit2gtk-4.1-dev \
             libappindicator3-dev \
             librsvg2-dev \
-            patchelf
+            patchelf \
+            cmake \
+            clang \
+            libclang-dev \
+            libasound2-dev
+
+      - name: Install macOS dependencies
+        if: startsWith(matrix.platform, 'macos')
+        run: brew list cmake >/dev/null 2>&1 || brew install cmake
+
+      - name: Set up Windows build deps (libclang for bindgen)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: echo "LIBCLANG_PATH=C:\Program Files\LLVM\bin" >> $env:GITHUB_ENV
 
       - name: Setup Node
         uses: actions/setup-node@v4

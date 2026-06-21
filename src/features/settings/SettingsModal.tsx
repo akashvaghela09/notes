@@ -1,29 +1,39 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   Download, Upload, Palette, Pencil, LayoutGrid, Database, Keyboard, Info,
+  Mic, Trash2, Check,
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useNotesStore } from '../../store/useNotesStore';
 import { useUIStore } from '../../store/useUIStore';
+import { useSttStore } from '../../store/useSttStore';
 import { loadAll } from '../../store/bootstrap';
 import { exportBackup, importBackup } from '../backup/backup';
-import { Modal, Segmented, Switch, ColorPicker, Button, ConfirmDialog } from '../../components';
+import { Modal, Segmented, Switch, ColorPicker, Button, ConfirmDialog, Badge, IconButton, Spinner } from '../../components';
 import type { SortKey, ThemePref, TrashRetention } from '../../types';
 import { TRASH_RETENTION_LABELS, EDITOR_FONT_PRESETS, clampFontPx, APP_VERSION } from '../../lib/constants';
 import { cn } from '../../utils/cn';
 import styles from './SettingsModal.module.css';
 
-type TabId = 'appearance' | 'editor' | 'home' | 'data' | 'shortcuts' | 'about';
+type TabId = 'appearance' | 'editor' | 'home' | 'speech' | 'data' | 'shortcuts' | 'about';
 
 const TABS: { id: TabId; label: string; icon: ReactNode }[] = [
   { id: 'appearance', label: 'Appearance', icon: <Palette size={16} /> },
   { id: 'editor', label: 'Editor', icon: <Pencil size={16} /> },
   { id: 'home', label: 'Home', icon: <LayoutGrid size={16} /> },
+  { id: 'speech', label: 'Speech', icon: <Mic size={16} /> },
   { id: 'data', label: 'Data', icon: <Database size={16} /> },
   { id: 'shortcuts', label: 'Shortcuts', icon: <Keyboard size={16} /> },
   { id: 'about', label: 'About', icon: <Info size={16} /> },
 ];
+
+/** Human-readable file size, e.g. 487600000 → "488 MB". */
+function formatBytes(bytes: number): string {
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`;
+  if (bytes >= 1e6) return `${Math.round(bytes / 1e6)} MB`;
+  return `${Math.round(bytes / 1e3)} KB`;
+}
 
 const isMac = typeof navigator !== 'undefined' && /mac/i.test(navigator.platform);
 const MOD = isMac ? '⌘' : 'Ctrl';
@@ -41,7 +51,119 @@ const SHORTCUTS: { keys: string[]; desc: string }[] = [
   { keys: [MOD, ','], desc: 'Open settings' },
   { keys: [MOD, '⇧', '+'], desc: 'Increase editor font size' },
   { keys: [MOD, '⇧', '−'], desc: 'Decrease editor font size' },
+  { keys: [MOD, 'Space'], desc: 'Start / stop dictation' },
+  { keys: [MOD, '⇧', 'Space'], desc: 'Dictate into a new note' },
 ];
+
+/** Settings → Speech: enable toggle + the Whisper model manager. */
+function SpeechPanel() {
+  const s = useSettingsStore((st) => st.settings);
+  const update = useSettingsStore((st) => st.update);
+  const models = useSttStore((st) => st.models);
+  const capabilities = useSttStore((st) => st.capabilities);
+  const activeBackend = useSttStore((st) => st.activeBackend);
+  const activeDevice = useSttStore((st) => st.activeDevice);
+  const downloads = useSttStore((st) => st.downloads);
+  const loadModels = useSttStore((st) => st.loadModels);
+  const loadCapabilities = useSttStore((st) => st.loadCapabilities);
+  const downloadModel = useSttStore((st) => st.downloadModel);
+  const deleteModel = useSttStore((st) => st.deleteModel);
+  const setModel = useSttStore((st) => st.setModel);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+  // Refresh install status and build capabilities when shown.
+  useEffect(() => {
+    void loadModels();
+    void loadCapabilities();
+  }, [loadModels, loadCapabilities]);
+
+  // GPU build → recommend the more accurate models; CPU-only → keep it light.
+  const gpuBuild = capabilities?.gpuBuild ?? false;
+  const accel =
+    activeBackend === 'gpu' ? `Running on GPU${activeDevice ? ` · ${activeDevice}` : ''}`
+    : activeBackend === 'cpu' ? 'Running on CPU'
+    : gpuBuild ? 'GPU acceleration available. Falls back to CPU if no GPU is found'
+    : 'CPU only';
+
+  return (
+    <>
+      <Row label="Speech-to-text" hint="Offline dictation with a local Whisper model. Nothing is sent to the cloud.">
+        <Switch checked={s.sttEnabled} onChange={(v) => update('sttEnabled', v)} label="Speech-to-text" />
+      </Row>
+
+      {s.sttEnabled && (
+        <div className={styles.models}>
+          <div className={styles.modelsHead}>
+            <span className={styles.labelText}>Models</span>
+            <span className={styles.hint}>Pick a model, then download it. Larger models are more accurate but slower.</span>
+            <span className={cn(styles.accel, (activeBackend === 'gpu' || gpuBuild) && styles.accelOn)}>{accel}</span>
+          </div>
+
+          {models.map((m) => {
+            const dl = downloads[m.id];
+            const selected = s.sttModel === m.id;
+            return (
+              <div key={m.id} className={cn(styles.model, selected && styles.modelSelected)}>
+                <button className={styles.modelMain} onClick={() => void setModel(m.id)} aria-pressed={selected}>
+                  <span className={cn(styles.radio, selected && styles.radioOn)}>
+                    {selected && <Check size={11} />}
+                  </span>
+                  <span className={styles.modelText}>
+                    <span className={styles.modelName}>
+                      {m.label}
+                      {m.lang === 'multi' && <Badge>Multilingual</Badge>}
+                    </span>
+                    <span className={styles.hint}>{formatBytes(m.sizeBytes)}</span>
+                  </span>
+                </button>
+
+                <div className={styles.modelAction}>
+                  {dl ? (
+                    <div className={styles.progress}>
+                      <Spinner size={14} />
+                      <span className={styles.progressText}>
+                        {dl.total ? `${Math.round((dl.received / dl.total) * 100)}%` : formatBytes(dl.received)}
+                      </span>
+                    </div>
+                  ) : m.downloaded ? (
+                    <>
+                      <span className={styles.installed}><Check size={14} /> Installed</span>
+                      <IconButton label="Delete model" size="sm" tone="danger" onClick={() => setConfirmDelete(m.id)}>
+                        <Trash2 size={15} />
+                      </IconButton>
+                    </>
+                  ) : (
+                    <Button size="sm" icon={<Download size={15} />} onClick={() => void downloadModel(m.id)}>Download</Button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          <p className={styles.sttNote}>
+            Press <kbd className={styles.kbd}>{MOD}</kbd> <kbd className={styles.kbd}>Space</kbd> anywhere to start dictation.
+            Words appear live as you speak. {gpuBuild
+              ? 'With GPU acceleration, Small or Medium give the best accuracy while keeping up in real-time; Tiny and Base are fastest.'
+              : 'On CPU, Tiny and Base keep up in real-time; Small and larger will lag behind speech.'}
+            {' '}Dictation uses your system default microphone; change it in your OS sound settings.
+            You may be asked to allow microphone access the first time.
+            {' '}Say “new line”, “new paragraph”, or “delete” (to remove the last sentence) as their own phrase to run them as commands.
+          </p>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        title="Delete model?"
+        message="Remove this model from disk. You can download it again anytime."
+        confirmLabel="Delete"
+        tone="danger"
+        onConfirm={() => { if (confirmDelete) void deleteModel(confirmDelete); setConfirmDelete(null); }}
+        onCancel={() => setConfirmDelete(null)}
+      />
+    </>
+  );
+}
 
 function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
@@ -190,6 +312,8 @@ export function SettingsModal() {
             </>
           )}
 
+          {tab === 'speech' && <SpeechPanel />}
+
           {tab === 'data' && (
             <>
               <Row label="Backup" hint="Export or restore your entire library as a file.">
@@ -235,7 +359,7 @@ export function SettingsModal() {
               <div className={styles.aboutVersion}>Version {APP_VERSION}</div>
               <p className={styles.aboutDesc}>
                 A fast, minimal, local-first notes app. Your notes live on your device in a local
-                database — no account, no cloud. Built with Tauri, React, and SQLite.
+                database, with no account and no cloud. Built with Tauri, React, and SQLite.
               </p>
             </div>
           )}
