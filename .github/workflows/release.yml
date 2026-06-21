@@ -17,15 +17,17 @@ jobs:
         # Release installers are built CPU-only (--no-default-features) so they
         # run anywhere without a Vulkan/CUDA runtime. The GPU build is the local
         # default; see GIT.md.
+        # `--no-default-features` is a cargo flag, so it must come after `--` to be
+        # forwarded to the Rust build (tauri build itself doesn't accept it).
         include:
           - platform: 'macos-latest' # Apple Silicon
-            args: '--target aarch64-apple-darwin --no-default-features'
+            args: '--target aarch64-apple-darwin -- --no-default-features'
           - platform: 'macos-latest' # Intel
-            args: '--target x86_64-apple-darwin --no-default-features'
+            args: '--target x86_64-apple-darwin -- --no-default-features'
           - platform: 'ubuntu-22.04'
-            args: '--no-default-features'
+            args: '-- --no-default-features'
           - platform: 'windows-latest'
-            args: '--no-default-features'
+            args: '-- --no-default-features'
 
     runs-on: ${{ matrix.platform }}
     steps:

@@ -29,6 +29,16 @@ Built with Tauri, React, TypeScript, and SQLite.
 - Full undo and redo support.
 - Customize editor font family (Sans, Serif, or Monospace) and font size.
 
+### Dictate by Voice (Offline Speech-to-Text)
+
+- Dictate notes with on-device Whisper models — fully offline, nothing is sent to the cloud.
+- Live transcription: text appears as you speak.
+- Manage models in **Settings → Speech** — download, switch, or delete Tiny, Base, Small, or Medium models, with a progress bar.
+- GPU acceleration via Vulkan with automatic CPU fallback (released installers run on CPU).
+- A toolbar microphone toggle and model picker, shown once the feature is enabled and a model is installed.
+- A floating "Listening" indicator while dictation is active, with a button to stop.
+- Voice commands (spoken as their own short, paused phrase): say **"new line"**, **"new paragraph"**, or **"delete"** (removes the last sentence).
+
 ### Organize Your Workspace
 
 - Create folders and nested subfolders.
@@ -81,6 +91,8 @@ Built with Tauri, React, TypeScript, and SQLite.
 | `Mod + ,`         | Open settings           |
 | `Mod + Shift + +` | Increase font size      |
 | `Mod + Shift + -` | Decrease font size      |
+| `Mod + Space`         | Start / stop dictation      |
+| `Mod + Shift + Space` | Dictate into a new note     |
 
 ---
 
@@ -105,6 +117,19 @@ On Debian/Ubuntu, install Tauri dependencies:
 sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file \
   libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
 ```
+
+Speech-to-text also compiles whisper.cpp, so the build needs a few more packages
+(on Debian/Ubuntu):
+
+```bash
+sudo apt install cmake clang libclang-dev libasound2-dev \
+  libvulkan-dev glslc glslang-tools
+```
+
+The default build includes GPU (Vulkan) acceleration. For a CPU-only build with
+no GPU dependencies, use `npm run tauri build -- -- --no-default-features` (this
+is what the released installers ship). The doubled `--` forwards the flag
+through npm and `tauri build` to cargo.
 
 ### Run in Development
 

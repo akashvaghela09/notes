@@ -4,7 +4,7 @@ All notable changes to Notes are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); this project
 uses [Semantic Versioning](https://semver.org/).
 
-## [1.2.0] - 2026-06-21
+## [1.2.1] - 2026-06-21
 
 ### Added — Offline speech-to-text (dictation)
 - **Local Whisper dictation, fully offline.** Speech recognition runs on-device
@@ -43,6 +43,8 @@ uses [Semantic Versioning](https://semver.org/).
   (cmake, libclang, ALSA on Linux) and builds **CPU-only** portable installers
   via `--no-default-features` (no Vulkan/CUDA runtime required to run them). The
   GPU build remains the local default; see `GIT.md`.
+- Fixed the release workflow passing `--no-default-features` to `tauri build`
+  directly (rejected); it is now forwarded to cargo as `-- --no-default-features`.
 
 ## [Unreleased]
 
