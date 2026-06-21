@@ -45,6 +45,8 @@ uses [Semantic Versioning](https://semver.org/).
   GPU build remains the local default; see `GIT.md`.
 - Fixed the release workflow passing `--no-default-features` to `tauri build`
   directly (rejected); it is now forwarded to cargo as `-- --no-default-features`.
+- Set the macOS `minimumSystemVersion` to 10.15 so whisper.cpp's `std::filesystem`
+  use compiles (the default 10.13 marked it unavailable).
 
 ## [Unreleased]
 

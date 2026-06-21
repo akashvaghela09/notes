@@ -24,10 +24,8 @@ jobs:
         include:
           - platform: 'macos-latest' # Apple Silicon
             args: '--target aarch64-apple-darwin -- --no-default-features'
-            deploymentTarget: '11.0'
           - platform: 'macos-latest' # Intel
             args: '--target x86_64-apple-darwin -- --no-default-features'
-            deploymentTarget: '10.15'
           - platform: 'ubuntu-22.04'
             args: '-- --no-default-features'
           - platform: 'windows-latest'
@@ -82,9 +80,6 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # whisper.cpp uses std::filesystem, which Apple's libc++ marks
-          # unavailable below macOS 10.15. Empty on Linux/Windows (ignored).
-          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.deploymentTarget }}
         with:
           # On a manual run (not a tag) these are empty, so tauri-action only
           # builds and skips creating a release.
