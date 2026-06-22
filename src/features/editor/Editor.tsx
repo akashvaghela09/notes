@@ -4,7 +4,7 @@ import {
   Pin, Palette, Download, Eye, Pencil, FolderInput, FileText, FileType, Printer,
   Save, AlignCenter, AlignJustify, Plus, FileUp, CopyPlus, Clipboard, Search,
   Undo2, Redo2, PanelLeft, PanelLeftClose, ArrowUp, ArrowDown, X, Settings,
-  Mic, MicOff, ChevronDown, Check,
+  Mic, MicOff, ChevronDown, Check, Replace, ReplaceAll,
 } from 'lucide-react';
 import type { Note } from '../../types';
 import { useNotesStore } from '../../store/useNotesStore';
@@ -20,7 +20,7 @@ import { exportAsText, exportAsMarkdown, importTextFile } from '../../utils/expo
 import { wordCount, noteName } from '../../utils/markdown';
 import { fullDate } from '../../utils/time';
 import {
-  IconButton, Menu, SaveStatePill, ColorPicker, MarkdownView,
+  IconButton, Menu, SaveStatePill, ColorPicker, MarkdownView, Button,
 } from '../../components';
 import type { MenuItem } from '../../components';
 import { PrintLayer } from './PrintLayer';
@@ -43,6 +43,15 @@ function highlightNodes(text: string, matches: number[], len: number, activeStar
   });
   if (last < text.length) nodes.push(text.slice(last));
   return nodes;
+}
+
+/** Newline-joined line numbers "1\n2\n…" sized to a text's logical line count.
+ *  Updated imperatively into the gutter so typing does no React reconciliation. */
+function lineNumberText(text: string): string {
+  const count = text.length === 0 ? 1 : text.split('\n').length;
+  let s = '';
+  for (let i = 1; i <= count; i++) s += `${i}\n`;
+  return s;
 }
 
 // ---- Voice commands -------------------------------------------------------
@@ -139,9 +148,17 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
   const sizerRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
 
-  // --- in-note search ---
+  const gutterRef = useRef<HTMLDivElement>(null);
+  // Line numbers are a full-width-mode feature only: the gutter needs the left
+  // edge, which fights the centered focus-mode column. So they're suppressed
+  // while focus mode is on (and the focus-mode toggle works normally again).
+  const lineNumbers = settings.editorLineNumbers && !focusMode;
+
+  // --- in-note search / replace ---
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [replaceOpen, setReplaceOpen] = useState(false);
+  const [replaceTerm, setReplaceTerm] = useState('');
   const [matchIdx, setMatchIdx] = useState(0);
   const matches = useMemo(() => {
     if (!query) return [] as number[];
@@ -182,6 +199,50 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
   };
   const openSearch = () => { setPreview(false); setSearchOpen(true); };
 
+  // Clicking the blank area around the text (padding, gutter, margins) would blur
+  // the textarea and the caret would vanish. Keep focus on the writing surface so
+  // the cursor stays put — the textarea itself still handles clicks on real text.
+  const keepFocusInBody = (e: React.MouseEvent) => {
+    if (preview) return;
+    const el = bodyRef.current;
+    if (!el || e.target === el) return;
+    e.preventDefault();
+    el.focus();
+  };
+
+  // Push a programmatic edit (replace) into the uncontrolled textarea + gutter,
+  // place the caret, then commit to the draft as one undo step.
+  const applyEdit = (next: string, caret: number) => {
+    const el = bodyRef.current;
+    if (el && !preview) {
+      el.value = next;
+      if (sizerRef.current) sizerRef.current.textContent = next + '\n';
+      if (gutterRef.current) gutterRef.current.textContent = lineNumberText(next);
+      el.setSelectionRange(caret, caret);
+      el.focus();
+    }
+    setContent(next);
+  };
+
+  const replaceCurrent = () => {
+    if (!matches.length || !query) return;
+    const start = matches[matchIdx] ?? matches[0];
+    const next = content.slice(0, start) + replaceTerm + content.slice(start + query.length);
+    applyEdit(next, start + replaceTerm.length);
+  };
+
+  const replaceAll = () => {
+    if (!matches.length || !query) return;
+    let res = '';
+    let last = 0;
+    for (const start of matches) {
+      res += content.slice(last, start) + replaceTerm;
+      last = start + query.length;
+    }
+    res += content.slice(last);
+    applyEdit(res, res.length);
+  };
+
   // Carry a query handed over from global search into this note's find bar.
   useEffect(() => {
     if (!pendingNoteSearch) return;
@@ -207,6 +268,7 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
   useEffect(() => {
     if (preview) return; // textarea/sizer aren't mounted in preview
     if (sizerRef.current) sizerRef.current.textContent = content + '\n';
+    if (gutterRef.current) gutterRef.current.textContent = lineNumberText(content);
     const el = bodyRef.current;
     if (el && el.value !== content) {
       el.value = content;
@@ -220,8 +282,25 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
   const onType = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const v = e.currentTarget.value;
     if (sizerRef.current) sizerRef.current.textContent = v + '\n'; // instant height, no React
+    if (gutterRef.current) gutterRef.current.textContent = lineNumberText(v);
     setContent(v);
   };
+
+  // Seed / refresh the line-number gutter when it's toggled on or the view flips
+  // between edit and preview (typing keeps it current via onType imperatively).
+  useEffect(() => {
+    if (gutterRef.current) gutterRef.current.textContent = lineNumberText(content);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lineNumbers, preview]);
+
+  // Escape closes the in-note find bar from anywhere (even while typing in the
+  // textarea, not just from the find input).
+  useEffect(() => {
+    if (!searchOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSearchOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [searchOpen]);
 
   // Dictation inserts text into the textarea live. While an utterance is in
   // progress its interim text occupies a tracked region [start, start+len] that
@@ -457,7 +536,14 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
           <IconButton
             label={focusMode ? 'Focus mode on' : 'Focus mode off'}
             active={focusMode}
-            onClick={() => void updateSetting('focusMode', !focusMode)}
+            // Don't let the button steal focus from the textarea (the caret would
+            // vanish and need a manual click back), then keep focus in the note
+            // across the relayout.
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              void updateSetting('focusMode', !focusMode);
+              requestAnimationFrame(() => bodyRef.current?.focus());
+            }}
           >
             {focusMode ? <AlignCenter size={17} /> : <AlignJustify size={17} />}
           </IconButton>
@@ -513,33 +599,68 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
 
       {searchOpen && (
         <div className={styles.searchBar}>
-          <Search size={14} className={styles.searchIcon} />
-          <input
-            className={styles.searchInput}
-            placeholder="Find in note…"
-            value={query}
-            autoFocus
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') { e.preventDefault(); gotoMatch(matchIdx + (e.shiftKey ? -1 : 1)); }
-              if (e.key === 'Escape') setSearchOpen(false);
-            }}
-          />
-          <span className={styles.searchCount}>
-            {query ? (matches.length ? `${matchIdx + 1}/${matches.length}` : 'No results') : ''}
-          </span>
-          <IconButton label="Previous" size="sm" disabled={!matches.length} onClick={() => gotoMatch(matchIdx - 1)}><ArrowUp size={15} /></IconButton>
-          <IconButton label="Next" size="sm" disabled={!matches.length} onClick={() => gotoMatch(matchIdx + 1)}><ArrowDown size={15} /></IconButton>
-          <IconButton label="Close search" size="sm" onClick={() => setSearchOpen(false)}><X size={15} /></IconButton>
+          <div className={styles.searchRow}>
+            <IconButton
+              label={replaceOpen ? 'Hide replace' : 'Show replace'}
+              size="sm"
+              active={replaceOpen}
+              onClick={() => setReplaceOpen((o) => !o)}
+            >
+              <Replace size={15} />
+            </IconButton>
+            <Search size={14} className={styles.searchIcon} />
+            <input
+              className={styles.searchInput}
+              placeholder="Find in note…"
+              value={query}
+              autoFocus
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); gotoMatch(matchIdx + (e.shiftKey ? -1 : 1)); }
+                if (e.key === 'Escape') setSearchOpen(false);
+              }}
+            />
+            <span className={styles.searchCount}>
+              {query ? (matches.length ? `${matchIdx + 1}/${matches.length}` : 'No results') : ''}
+            </span>
+            <IconButton label="Previous" size="sm" disabled={!matches.length} onClick={() => gotoMatch(matchIdx - 1)}><ArrowUp size={15} /></IconButton>
+            <IconButton label="Next" size="sm" disabled={!matches.length} onClick={() => gotoMatch(matchIdx + 1)}><ArrowDown size={15} /></IconButton>
+            <IconButton label="Close search" size="sm" onClick={() => setSearchOpen(false)}><X size={15} /></IconButton>
+          </div>
+
+          {replaceOpen && (
+            <div className={styles.searchRow}>
+              <span className={styles.replaceSpacer} aria-hidden />
+              <ReplaceAll size={14} className={styles.searchIcon} />
+              <input
+                className={styles.searchInput}
+                placeholder="Replace with…"
+                value={replaceTerm}
+                onChange={(e) => setReplaceTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { e.preventDefault(); replaceCurrent(); }
+                  if (e.key === 'Escape') setSearchOpen(false);
+                }}
+              />
+              <Button size="sm" variant="ghost" disabled={!matches.length} onClick={replaceCurrent}>Replace</Button>
+              <Button size="sm" variant="ghost" disabled={!matches.length} onClick={replaceAll}>All</Button>
+            </div>
+          )}
         </div>
       )}
 
-      <div className={styles.surface}>
-        <div className={cn(styles.column, !focusMode && styles.wide)}>
+      <div
+        className={cn(styles.surface, lineNumbers && !preview && styles.surfaceLined)}
+        onMouseDown={keepFocusInBody}
+      >
+        <div className={cn(styles.column, !focusMode && styles.wide, lineNumbers && !preview && styles.lined)}>
           {preview && markdownOn ? (
             <MarkdownView content={content} className={styles.preview} />
           ) : (
-            <div className={styles.editArea}>
+            <div className={cn(styles.editArea, lineNumbers && styles.withGutter)}>
+              {/* Line-number gutter (logical lines). Kept in sync imperatively
+                  alongside the sizer so typing does no React reconciliation. */}
+              {lineNumbers && <div className={styles.gutter} aria-hidden ref={gutterRef} />}
               {/* Invisible replica sizes the grid cell to the content (updated
                   imperatively in onType / the sync effect — never via React),
                   so the full-width .surface stays the only scroller. */}
@@ -557,6 +678,7 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
                 defaultValue={note.content}
                 onChange={onType}
                 spellCheck={settings.spellcheck}
+                wrap={lineNumbers ? 'off' : 'soft'}
                 autoFocus
               />
             </div>

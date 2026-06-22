@@ -40,11 +40,15 @@ const MOD = isMac ? '⌘' : 'Ctrl';
 const SHORTCUTS: { keys: string[]; desc: string }[] = [
   { keys: [MOD, 'N'], desc: 'New note' },
   { keys: [MOD, 'S'], desc: 'Save note' },
+  { keys: [MOD, '⇧', '⌫'], desc: 'Close note' },
+  { keys: [MOD, 'Tab'], desc: 'Next note tab' },
+  { keys: [MOD, '⇧', 'Tab'], desc: 'Previous note tab' },
   { keys: [MOD, 'M'], desc: 'Toggle markdown preview' },
   { keys: [MOD, 'Z'], desc: 'Undo' },
   { keys: [MOD, '⇧', 'Z'], desc: 'Redo' },
   { keys: [MOD, 'F'], desc: 'Find in note' },
   { keys: [MOD, '⇧', 'F'], desc: 'Search all notes' },
+  { keys: ['Esc'], desc: 'Close search / dialog' },
   { keys: [MOD, '↓'], desc: 'Next search match' },
   { keys: [MOD, '↑'], desc: 'Previous search match' },
   { keys: [MOD, '\\'], desc: 'Toggle sidebar' },
@@ -269,6 +273,9 @@ export function SettingsModal() {
                   <button className={styles.stepBtn} aria-label="Increase font size" onClick={() => update('editorFontPx', clampFontPx(s.editorFontPx + 1))}>+</button>
                   <span className={styles.fontPx}>{s.editorFontPx}px</span>
                 </div>
+              </Row>
+              <Row label="Line numbers" hint="Show a line-number gutter. Full-width mode only (turn off Focus mode).">
+                <Switch checked={s.editorLineNumbers} onChange={(v) => update('editorLineNumbers', v)} label="Line numbers" />
               </Row>
               <Row label="Focus mode" hint="Center the writing column at a comfortable width.">
                 <Switch checked={s.focusMode} onChange={(v) => update('focusMode', v)} label="Focus mode" />

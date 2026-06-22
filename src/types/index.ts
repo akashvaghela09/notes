@@ -87,6 +87,8 @@ export interface Settings {
   /** Editor font size in px. Adjustable continuously via Ctrl+Shift+±. */
   editorFontPx: number;
   editorTypeface: EditorTypeface;
+  /** Show a line-number gutter in the editor. */
+  editorLineNumbers: boolean;
   /** Focused (narrow, centered) writing column vs. full-width editor. */
   focusMode: boolean;
   /** Native spellcheck in the editor. Off by default — it can stutter typing

@@ -45,7 +45,7 @@ export const TRASH_RETENTION_LABELS: Record<TrashRetention, string> = {
 export const SQLITE_URL = 'sqlite:notes.db';
 
 /** App version shown in Settings → About. Keep in sync with package.json. */
-export const APP_VERSION = '1.2.1';
+export const APP_VERSION = '1.2.4';
 
 /** Debounce window for draft autosave — batches rapid keystrokes into one write. */
 export const DRAFT_AUTOSAVE_MS = 1500;
@@ -55,6 +55,7 @@ export const DEFAULT_SETTINGS: Settings = {
   markdownEnabled: true,
   editorFontPx: 16,
   editorTypeface: 'sans',
+  editorLineNumbers: false,
   focusMode: true,
   spellcheck: false,
   homeLayout: 'sticky',

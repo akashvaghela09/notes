@@ -6,6 +6,8 @@ export interface Hotkey {
   /** Require Ctrl (Linux) / Cmd (mac). Defaults true for app shortcuts. */
   mod?: boolean;
   shift?: boolean;
+  /** Require Alt/Option. Defaults false — combos with Alt held never match. */
+  alt?: boolean;
   handler: (e: KeyboardEvent) => void;
 }
 
@@ -19,7 +21,8 @@ export function useHotkeys(hotkeys: Hotkey[]): void {
         if (
           e.key.toLowerCase() === hk.key &&
           wantMod === mod &&
-          (hk.shift ?? false) === e.shiftKey
+          (hk.shift ?? false) === e.shiftKey &&
+          (hk.alt ?? false) === e.altKey
         ) {
           hk.handler(e);
           return;

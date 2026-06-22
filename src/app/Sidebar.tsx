@@ -43,6 +43,7 @@ export function Sidebar() {
   const setSearchTerm = useUIStore((s) => s.setSearchTerm);
   const goHome = useUIStore((s) => s.goHome);
   const goTrash = useUIStore((s) => s.goTrash);
+  const setPendingFolderRename = useUIStore((s) => s.setPendingFolderRename);
 
   const [pendingDelete, setPendingDelete] = useState<{ folder: Folder; count: number } | null>(null);
   const [dragWidth, setDragWidth] = useState<number | null>(null);
@@ -170,6 +171,14 @@ export function Sidebar() {
           placeholder="Search notes…"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyDown={(e) => {
+            // Escape clears the query and exits search mode; if already empty,
+            // drop focus so the keystroke reads as "leave search".
+            if (e.key === 'Escape') {
+              if (searchTerm) setSearchTerm('');
+              else e.currentTarget.blur();
+            }
+          }}
           disabled={!hydrated}
         />
         {searchTerm && (
@@ -263,14 +272,23 @@ export function Sidebar() {
           </div>
         )}
 
-        <div className={styles.group}>
+        <div className={styles.foldersGroup}>
           <div className={styles.groupHeader}>
             <span className={styles.groupLabel}>Folders</span>
-            <IconButton label="New folder" size="sm" onClick={() => createFolder('Untitled folder')}>
+            <IconButton
+              label="New folder"
+              size="sm"
+              onClick={async () => {
+                const folder = await createFolder('Untitled folder');
+                setPendingFolderRename(folder.id);
+              }}
+            >
               <Plus size={15} />
             </IconButton>
           </div>
-          <FolderTree onRequestDelete={requestDeleteFolder} />
+          <div className={styles.folderScroll}>
+            <FolderTree onRequestDelete={requestDeleteFolder} />
+          </div>
         </div>
         </>
         )}

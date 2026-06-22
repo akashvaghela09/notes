@@ -26,6 +26,7 @@ Built with Tauri, React, TypeScript, and SQLite.
 - Save manually anytime with `Ctrl/⌘ + S`.
 - Built-in Markdown preview.
 - Focus mode for distraction-free writing.
+- Optional line numbers (shown in full-width mode).
 - Full undo and redo support.
 - Customize editor font family (Sans, Serif, or Monospace) and font size.
 
@@ -42,6 +43,7 @@ Built with Tauri, React, TypeScript, and SQLite.
 ### Organize Your Workspace
 
 - Create folders and nested subfolders.
+- Create a new note directly inside a folder from its right-click menu.
 - Browse notes from the sidebar or main workspace.
 - Drag and drop notes and folders to reorganize them.
 - Open multiple notes in tabs.
@@ -51,6 +53,7 @@ Built with Tauri, React, TypeScript, and SQLite.
 ### Find Anything Quickly
 
 - Search within the current note with match highlighting.
+- Find and replace text within a note (replace one or all matches).
 - Jump between search results instantly.
 - Search across your entire note library.
 - Open results directly from contextual search previews.
@@ -80,6 +83,9 @@ Built with Tauri, React, TypeScript, and SQLite.
 | ----------------- | ----------------------- |
 | `Mod + N`         | Create new note         |
 | `Mod + S`         | Save current note       |
+| `Mod + Shift + ⌫` | Close current note      |
+| `Mod + Tab`       | Next note tab           |
+| `Mod + Shift + Tab` | Previous note tab     |
 | `Mod + Z`         | Undo                    |
 | `Mod + Shift + Z` | Redo                    |
 | `Mod + F`         | Find in note            |
