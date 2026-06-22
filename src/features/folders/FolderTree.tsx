@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ChevronRight, Folder as FolderIcon, FolderPlus, Pencil, Trash2, MoreHorizontal,
   FileText, Copy, SquareArrowOutUpRight,
@@ -27,6 +27,7 @@ export function FolderTree({ onRequestDelete }: FolderTreeProps) {
   const renameFolder = useFoldersStore((s) => s.rename);
   const moveFolder = useFoldersStore((s) => s.move);
   const notes = useNotesStore((s) => s.notes);
+  const createNote = useNotesStore((s) => s.create);
   const trashNote = useNotesStore((s) => s.trash);
   const moveNote = useNotesStore((s) => s.move);
   const setFileName = useNotesStore((s) => s.setFileName);
@@ -37,7 +38,10 @@ export function FolderTree({ onRequestDelete }: FolderTreeProps) {
   const expanded = useUIStore((s) => s.expandedFolders);
   const toggleExpanded = useUIStore((s) => s.toggleFolderExpanded);
   const scope = useUIStore((s) => s.scope);
+  const view = useUIStore((s) => s.view);
   const goHome = useUIStore((s) => s.goHome);
+  const pendingFolderRename = useUIStore((s) => s.pendingFolderRename);
+  const setPendingFolderRename = useUIStore((s) => s.setPendingFolderRename);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState('');
@@ -74,6 +78,31 @@ export function FolderTree({ onRequestDelete }: FolderTreeProps) {
     setEditingId(null);
   };
 
+  // A folder just created elsewhere (e.g. the sidebar "New folder" button) drops
+  // straight into inline rename so the user can name it without an extra click.
+  useEffect(() => {
+    if (!pendingFolderRename) return;
+    const f = folders.find((x) => x.id === pendingFolderRename);
+    if (f) {
+      beginRename(f);
+      setPendingFolderRename(null);
+    }
+  }, [pendingFolderRename, folders, setPendingFolderRename]);
+
+  // Create a subfolder, reveal it, and immediately rename it.
+  const createSubfolder = async (parent: Folder, isOpen: boolean) => {
+    const child = await createFolder('Untitled folder', parent.id);
+    if (!isOpen) toggleExpanded(parent.id);
+    beginRename(child);
+  };
+
+  // Create a note inside a folder and open it so the user can start typing.
+  const createNoteIn = async (folder: Folder, isOpen: boolean) => {
+    const note = await createNote({ folderId: folder.id });
+    if (!isOpen) toggleExpanded(folder.id);
+    await openNote(note.id);
+  };
+
   const beginRenameNote = (n: Note) => { setEditingNoteId(n.id); setNoteDraft(noteName(n)); };
   const commitRenameNote = () => {
     if (editingNoteId) void setFileName(editingNoteId, noteDraft);
@@ -88,14 +117,16 @@ export function FolderTree({ onRequestDelete }: FolderTreeProps) {
       y: e.clientY,
       items: [
         {
+          label: 'New note',
+          icon: <FileText size={15} />,
+          onClick: () => void createNoteIn(folder, isOpen),
+        },
+        {
           label: 'New subfolder',
           icon: <FolderPlus size={15} />,
-          onClick: async () => {
-            await createFolder('Untitled folder', folder.id);
-            if (!isOpen) toggleExpanded(folder.id);
-          },
+          onClick: () => void createSubfolder(folder, isOpen),
         },
-        { label: 'Rename', icon: <Pencil size={15} />, onClick: () => beginRename(folder) },
+        { label: 'Rename', icon: <Pencil size={15} />, separated: true, onClick: () => beginRename(folder) },
         {
           label: 'Delete',
           icon: <Trash2 size={15} />,
@@ -139,12 +170,23 @@ export function FolderTree({ onRequestDelete }: FolderTreeProps) {
       const folderNotes = notesByFolder.get(folder.id) ?? [];
       const hasChildren = byParent.has(folder.id) || folderNotes.length > 0;
       const isOpen = expanded.has(folder.id);
-      const selected = scope.type === 'folder' && scope.id === folder.id;
+      // A folder reads as "selected" only while browsing it on the home surface;
+      // once a note is open in the editor, the active file owns the highlight.
+      const selected = scope.type === 'folder' && scope.id === folder.id && view === 'home';
       // When collapsed, hint that the open note lives in this folder.
       const hasActive = !isOpen && !!activeNoteId && folderNotes.some((n) => n.id === activeNoteId);
 
       return (
-        <div key={folder.id}>
+        // The whole folder block is a drop target for this folder. Drops bubble up
+        // to the nearest folder, so dropping on a file row or the expanded area
+        // (not just the header) lands in the right folder. stopPropagation keeps a
+        // nested folder from also handing the drop to its parent.
+        <div
+          key={folder.id}
+          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDropId(folder.id); }}
+          onDragLeave={(e) => { e.stopPropagation(); setDropId((d) => (d === folder.id ? null : d)); }}
+          onDrop={(e) => { e.stopPropagation(); void onDropOnFolder(e, folder.id); }}
+        >
           <div
             className={cn(
               styles.row,
@@ -156,9 +198,6 @@ export function FolderTree({ onRequestDelete }: FolderTreeProps) {
             draggable={editingId !== folder.id}
             onContextMenu={(e) => openMenu(e, folder, isOpen)}
             onDragStart={(e) => startDrag(e, { kind: 'folder', id: folder.id })}
-            onDragOver={(e) => { e.preventDefault(); setDropId(folder.id); }}
-            onDragLeave={() => setDropId((d) => (d === folder.id ? null : d))}
-            onDrop={(e) => void onDropOnFolder(e, folder.id)}
           >
             <button
               className={cn(styles.chevron, !hasChildren && styles.chevronHidden)}
@@ -185,6 +224,7 @@ export function FolderTree({ onRequestDelete }: FolderTreeProps) {
                   className={styles.renameInput}
                   value={draftName}
                   autoFocus
+                  onFocus={(e) => e.target.select()}
                   onClick={(e) => e.stopPropagation()}
                   onChange={(e) => setDraftName(e.target.value)}
                   onBlur={commitRename}
@@ -225,6 +265,7 @@ export function FolderTree({ onRequestDelete }: FolderTreeProps) {
                   className={styles.renameInput}
                   value={noteDraft}
                   autoFocus
+                  onFocus={(e) => e.target.select()}
                   onClick={(e) => e.stopPropagation()}
                   onChange={(e) => setNoteDraft(e.target.value)}
                   onBlur={commitRenameNote}

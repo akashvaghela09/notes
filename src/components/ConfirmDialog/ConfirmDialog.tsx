@@ -20,7 +20,10 @@ interface ConfirmDialogProps extends ConfirmConfig {
 }
 
 /** Reusable confirmation / three-way decision dialog (used by destructive
- *  actions and the close-with-unsaved-draft flow — DESIGN.md §7). */
+ *  actions and the close-with-unsaved-draft flow — DESIGN.md §7).
+ *
+ *  The confirm action is auto-focused on open, so Enter triggers it; Esc cancels
+ *  (handled by the Modal). */
 export function ConfirmDialog({
   open,
   title,
@@ -49,7 +52,7 @@ export function ConfirmDialog({
               {altLabel}
             </Button>
           )}
-          <Button variant={tone} onClick={onConfirm}>
+          <Button variant={tone} autoFocus onClick={onConfirm}>
             {confirmLabel}
           </Button>
         </>

@@ -7,6 +7,7 @@ import { useBootStore } from '../store/useBootStore';
 import { draftsRepo } from '../features/drafts/repo';
 import { notesRepo } from '../features/notes/repo';
 import { noteName } from '../utils/markdown';
+import { useHotkeys } from '../hooks/useHotkeys';
 import { ConfirmDialog, Tooltip } from '../components';
 import { cn } from '../utils/cn';
 import styles from './TabBar.module.css';
@@ -62,6 +63,34 @@ export function TabBar() {
     if (dirty.has(noteId)) setClosing(tabId);
     else void closeTab(tabId);
   };
+
+  // Switch to the next/previous tab, wrapping around.
+  const cycleTab = (delta: number) => {
+    if (tabs.length < 2) return;
+    const idx = tabs.findIndex((t) => t.id === activeTabId);
+    const base = idx === -1 ? 0 : idx;
+    const next = (base + delta + tabs.length) % tabs.length;
+    activate(tabs[next].id);
+  };
+
+  useHotkeys([
+    // Ctrl/Cmd+Shift+Backspace closes the current note (Ctrl+Backspace is left to
+    // the textarea for delete-word). Pops the unsaved-changes dialog if needed.
+    {
+      key: 'backspace',
+      shift: true,
+      handler: (e) => {
+        if (view !== 'editor') return;
+        const tab = tabs.find((t) => t.id === activeTabId);
+        if (!tab) return;
+        e.preventDefault();
+        requestClose(tab.id, tab.noteId);
+      },
+    },
+    // Ctrl/Cmd+Tab cycles tabs forward, +Shift cycles backward.
+    { key: 'tab', handler: (e) => { e.preventDefault(); cycleTab(1); } },
+    { key: 'tab', shift: true, handler: (e) => { e.preventDefault(); cycleTab(-1); } },
+  ]);
 
   const closingNoteId = tabs.find((t) => t.id === closing)?.noteId ?? null;
 

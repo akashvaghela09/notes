@@ -33,8 +33,16 @@ export const useTabsStore = create<TabsState>((set, get) => ({
   liveTitles: {},
 
   async load() {
-    const tabs = await tabsRepo.list();
+    const allTabs = await tabsRepo.list();
     const dirty = new Set(await draftsRepo.dirtyNoteIds());
+    // Keep only tabs whose note still has unsaved work (a draft). Saved,
+    // draft-less notes are dropped so relaunching starts with a clean tab list.
+    const tabs = allTabs.filter((t) => dirty.has(t.noteId));
+    const removed = allTabs.filter((t) => !dirty.has(t.noteId));
+    if (removed.length) {
+      for (const t of removed) await tabsRepo.close(t.id);
+      await tabsRepo.reorder(tabs.map((t) => t.id));
+    }
     const active = tabs.find((t) => t.isActive) ?? null;
     set({ tabs, dirty, activeTabId: active?.id ?? null });
   },

@@ -4,6 +4,44 @@ All notable changes to Notes are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); this project
 uses [Semantic Versioning](https://semver.org/).
 
+## [1.2.4] - 2026-06-22
+
+### Added
+- **Line numbers in the editor.** Optional gutter toggled in Settings → Editor.
+  Available in full-width mode (Focus mode off); switches the writing surface to
+  a non-wrapping, code-editor view with a left-pinned gutter so every line maps
+  1:1 to its number.
+- **Find and replace.** The in-note find bar gains a Replace toggle with a
+  replace field plus **Replace** and **Replace All** actions; replacements commit
+  as a single undo step.
+- **New note from a folder's context menu.** Right-click a folder → **New note**
+  creates a note inside it, expands the folder, and opens it ready to type.
+- **Shortcuts:** `Ctrl/Cmd+Shift+Backspace` closes the current note (popping the
+  unsaved-changes dialog when needed); `Ctrl/Cmd+Tab` and `Ctrl/Cmd+Shift+Tab`
+  cycle forward/backward through open note tabs. Listed in Settings → Shortcuts.
+
+### Changed
+- **New folders enter rename immediately.** Creating a folder (sidebar button or
+  "New subfolder") drops straight into inline rename with the name selected.
+- **Folders section scrolls on its own.** It now takes the sidebar's remaining
+  height and scrolls independently, so a large folder/file tree no longer scrolls
+  the whole panel; a small bottom padding keeps the last item off the edge.
+- **Escape closes search.** Pressing Escape clears/exits the sidebar search and
+  closes the in-note find bar.
+- **Cleaner tab list on relaunch.** Saved, draft-less tabs are dropped on launch,
+  so reopening the app starts with only notes that still have unsaved work.
+- **Roomier drag-and-drop.** Dropping a note/folder anywhere in a folder's block
+  (header, file rows, or the expanded area) now targets that folder, not just the
+  header row.
+- **Unsaved-changes dialog** auto-focuses Save so Enter confirms; Esc cancels.
+- App keyboard shortcuts no longer fire when **Alt** is held.
+
+### Fixed
+- A selected folder no longer stays highlighted after opening/editing a note —
+  the active file owns the highlight.
+- The editor caret no longer disappears when clicking the blank area around the
+  text (clicking anywhere on the writing surface keeps focus in the note).
+
 ## [1.2.1] - 2026-06-21
 
 ### Added — Offline speech-to-text (dictation)

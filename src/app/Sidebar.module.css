@@ -6,7 +6,7 @@
   height: 100%;
   background: var(--bg-sunken);
   border-right: 1px solid var(--border);
-  padding: var(--space-3) var(--space-3) 0;
+  padding: var(--space-3) var(--space-3) var(--space-2);
   gap: var(--space-2);
   overflow: hidden;
 }
@@ -91,30 +91,51 @@
   50% { opacity: 0.85; }
 }
 
+/* Column that fills the sidebar. The fixed sections (nav, pinned, recent) keep
+   their natural height; only the folders tree below scrolls. */
 .scroll {
   flex: 1;
-  overflow-y: auto;
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   padding-top: var(--space-1);
-  /* Hide this scrollbar — it would sit mid-screen between sidebar and content. */
-  scrollbar-width: none;
-}
-.scroll::-webkit-scrollbar {
-  display: none;
 }
 
 .section {
   display: flex;
   flex-direction: column;
   gap: 1px;
+  flex: none;
 }
 
 .group {
   display: flex;
   flex-direction: column;
   gap: 1px;
+  flex: none;
+}
+
+/* The folders group takes the remaining height; its tree scrolls on its own. */
+.foldersGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-height: 0;
+}
+.folderScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* Breathing room so the last folder/file isn't glued to the bottom edge. */
+  padding-bottom: var(--space-4);
+  /* Hide the scrollbar to match the rest of the sidebar; scroll still works. */
+  scrollbar-width: none;
+}
+.folderScroll::-webkit-scrollbar {
+  display: none;
 }
 .groupHeader {
   display: flex;

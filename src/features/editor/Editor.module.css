@@ -47,13 +47,23 @@
   color: var(--text);
 }
 
-/* In-note find bar */
+/* In-note find / replace bar */
 .searchBar {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--border);
+  flex: none;
+}
+.searchRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* Aligns the replace input under the find input (matches the toggle button width). */
+.replaceSpacer {
+  width: 28px;
   flex: none;
 }
 .searchIcon {
@@ -101,6 +111,11 @@
   overflow-y: auto;
   /* Block scroller (not flex) composites scrolling more smoothly. */
 }
+/* Line-numbers view: lines don't wrap, so the surface scrolls horizontally too
+   and the gutter stays exactly aligned with each line. */
+.surfaceLined {
+  overflow-x: auto;
+}
 .column {
   width: 100%;
   max-width: var(--editor-max-width);
@@ -120,6 +135,16 @@
   padding-left: var(--space-4);
   padding-right: var(--space-4);
 }
+/* Line-numbers view ignores focus centering: the writing area is left-aligned
+   and grows with its (non-wrapping) content so the left gutter is always pinned
+   to the left edge in both focus and full-width modes. */
+.lined {
+  max-width: none;
+  margin: 0;
+  width: max-content;
+  min-width: 100%;
+  padding-left: 0;
+}
 
 /* CSS auto-sizer: the sizer, backdrop, and textarea share one grid cell. The
    sizer (full text) sets the cell height, so the textarea grows with content
@@ -130,6 +155,49 @@
 }
 .editArea > * {
   grid-area: 1 / 1 / 2 / 2;
+}
+/* With line numbers: a gutter column on the left, the text layers on the right.
+   Both size to their (non-wrapping) content so the surface scrolls as one. */
+.editArea.withGutter {
+  width: max-content;
+  min-width: 100%;
+  grid-template-columns: max-content max-content;
+  column-gap: 0;
+}
+.editArea.withGutter > * {
+  grid-column: 2;
+}
+.editArea.withGutter > .gutter {
+  grid-column: 1;
+}
+/* Non-wrapping text layers so each visual line maps 1:1 to a gutter number. */
+.withGutter .sizer,
+.withGutter .body,
+.withGutter .backdrop {
+  white-space: pre;
+  overflow-wrap: normal;
+}
+/* VS Code-style gutter: muted, right-aligned numbers, no divider rule, a stable
+   width so the text doesn't shift as the line count grows, and a comfortable gap
+   to the text. Pinned to the left as the surface scrolls horizontally. */
+.gutter {
+  font-family: var(--editor-font);
+  font-size: var(--editor-font-size);
+  line-height: var(--lh-read);
+  min-height: 70vh;
+  min-width: 2ch;
+  white-space: pre;
+  text-align: right;
+  color: var(--text-tertiary);
+  opacity: 0.7;
+  user-select: none;
+  pointer-events: none;
+  padding: 0 var(--space-4) 0 var(--space-3);
+  tab-size: 1;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--bg);
 }
 .sizer,
 .body,

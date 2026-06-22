@@ -16,9 +16,12 @@ interface UIState {
   expandedFolders: Set<string>;
   /** Query handed from global search to the editor's in-note find on open. */
   pendingNoteSearch: string;
+  /** A just-created folder id that should drop straight into inline rename. */
+  pendingFolderRename: string | null;
 
   goHome: (scope?: HomeScope) => void;
   setPendingNoteSearch: (q: string) => void;
+  setPendingFolderRename: (id: string | null) => void;
   goTrash: () => void;
   goEditor: () => void;
   openSettings: () => void;
@@ -34,9 +37,14 @@ export const useUIStore = create<UIState>((set, get) => ({
   searchTerm: '',
   expandedFolders: new Set(),
   pendingNoteSearch: '',
+  pendingFolderRename: null,
 
   setPendingNoteSearch(q) {
     set({ pendingNoteSearch: q });
+  },
+
+  setPendingFolderRename(id) {
+    set({ pendingFolderRename: id });
   },
 
   goHome(scope) {

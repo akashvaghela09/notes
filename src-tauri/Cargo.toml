@@ -1,6 +1,6 @@
 [package]
 name = "notes"
-version = "1.2.1"
+version = "1.2.4"
 description = "Notes — a fast, minimal, local-first notes app"
 authors = ["Akash"]
 edition = "2021"
