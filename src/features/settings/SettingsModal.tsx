@@ -274,7 +274,10 @@ export function SettingsModal() {
                   <span className={styles.fontPx}>{s.editorFontPx}px</span>
                 </div>
               </Row>
-              <Row label="Line numbers" hint="Show a line-number gutter. Full-width mode only (turn off Focus mode).">
+              <Row label="Wrap text" hint="Wrap long lines. Off → full-width text scrolls sideways instead.">
+                <Switch checked={s.editorWrap} onChange={(v) => update('editorWrap', v)} label="Wrap text" />
+              </Row>
+              <Row label="Line numbers" hint="Show a line-number gutter. Full-width mode only (turn off Focus mode). Aligns even when lines wrap.">
                 <Switch checked={s.editorLineNumbers} onChange={(v) => update('editorLineNumbers', v)} label="Line numbers" />
               </Row>
               <Row label="Focus mode" hint="Center the writing column at a comfortable width.">

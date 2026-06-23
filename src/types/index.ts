@@ -89,6 +89,9 @@ export interface Settings {
   editorTypeface: EditorTypeface;
   /** Show a line-number gutter in the editor. */
   editorLineNumbers: boolean;
+  /** Soft-wrap long lines. Off → full-width text scrolls horizontally. On by
+   *  default; takes precedence over line numbers (which need no-wrap). */
+  editorWrap: boolean;
   /** Focused (narrow, centered) writing column vs. full-width editor. */
   focusMode: boolean;
   /** Native spellcheck in the editor. Off by default — it can stutter typing
