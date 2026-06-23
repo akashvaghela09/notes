@@ -46,12 +46,73 @@ function highlightNodes(text: string, matches: number[], len: number, activeStar
 }
 
 /** Newline-joined line numbers "1\n2\n…" sized to a text's logical line count.
- *  Updated imperatively into the gutter so typing does no React reconciliation. */
+ *  Updated imperatively into the gutter so typing does no React reconciliation.
+ *  Used by the no-wrap gutter, where every line is exactly one row tall. */
 function lineNumberText(text: string): string {
   const count = text.length === 0 ? 1 : text.split('\n').length;
   let s = '';
   for (let i = 1; i <= count; i++) s += `${i}\n`;
   return s;
+}
+
+const removeTextNodes = (host: HTMLElement) => {
+  for (const n of Array.from(host.childNodes)) {
+    if (n.nodeType === Node.TEXT_NODE) host.removeChild(n);
+  }
+};
+
+/** Render `text` as one block per logical line into `host` (reusing children),
+ *  so each line's wrapped height can be measured. Empty lines get a zero-width
+ *  space to keep a one-row box. Backs the measured wrap gutter. */
+function renderLineBlocks(host: HTMLElement, text: string, cls: string): void {
+  removeTextNodes(host);
+  const lines = text.split('\n');
+  while (host.children.length > lines.length) host.removeChild(host.lastElementChild!);
+  while (host.children.length < lines.length) {
+    const d = document.createElement('div');
+    d.className = cls;
+    host.appendChild(d);
+  }
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i] === '' ? '\u200b' : lines[i];
+    const d = host.children[i] as HTMLElement;
+    if (d.textContent !== t) d.textContent = t;
+  }
+}
+
+/** Size each gutter line block to its matching sizer line, so one number sits at
+ *  each logical line's first row and wrapped rows stay blank. Each measured
+ *  height is snapped to a whole number of `unit` (single-row) heights: this both
+ *  keeps the numbers evenly spaced (no sub-pixel jitter) and keeps them aligned
+ *  with the textarea, whose rows are each exactly one line tall. Numbers are
+ *  written first (they can change the gutter width, hence the text wrap), then
+ *  heights are read in one pass, then written — one forced layout regardless of
+ *  line count. */
+function syncGutterHeights(sizer: HTMLElement, gutter: HTMLElement, cls: string, unit: number): void {
+  removeTextNodes(gutter);
+  const count = sizer.children.length;
+  while (gutter.children.length > count) gutter.removeChild(gutter.lastElementChild!);
+  while (gutter.children.length < count) {
+    const d = document.createElement('div');
+    d.className = cls;
+    gutter.appendChild(d);
+  }
+  for (let i = 0; i < count; i++) {
+    const g = gutter.children[i] as HTMLElement;
+    const num = `${i + 1}`;
+    if (g.textContent !== num) g.textContent = num;
+  }
+  const heights = new Array<number>(count);
+  for (let i = 0; i < count; i++) {
+    const h = (sizer.children[i] as HTMLElement).getBoundingClientRect().height;
+    const rows = unit > 0 ? Math.max(1, Math.round(h / unit)) : 1;
+    heights[i] = unit > 0 ? rows * unit : h;
+  }
+  for (let i = 0; i < count; i++) {
+    const hpx = `${heights[i]}px`;
+    const g = gutter.children[i] as HTMLElement;
+    if (g.style.height !== hpx) g.style.height = hpx;
+  }
 }
 
 // ---- Voice commands -------------------------------------------------------
@@ -149,10 +210,118 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
   const backdropRef = useRef<HTMLDivElement>(null);
 
   const gutterRef = useRef<HTMLDivElement>(null);
+  const editAreaRef = useRef<HTMLDivElement>(null);
+  const probeRef = useRef<HTMLDivElement>(null);
+  const surfaceRef = useRef<HTMLDivElement>(null);
+  const caretMirrorRef = useRef<HTMLDivElement | null>(null);
+
+  // The textarea is overflow:hidden (it auto-grows; the .surface is the scroller),
+  // so the browser's native "keep the caret visible" no longer fires. Mirror the
+  // text up to the caret into a hidden clone, read the caret's position from it,
+  // and scroll the .surface so the caret stays in view while typing/navigating.
+  const scrollCaretIntoView = useCallback(() => {
+    const el = bodyRef.current;
+    const surface = surfaceRef.current;
+    if (!el || !surface) return;
+    let mirror = caretMirrorRef.current;
+    if (!mirror) {
+      mirror = document.createElement('div');
+      mirror.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(mirror);
+      caretMirrorRef.current = mirror;
+    }
+    const cs = getComputedStyle(el);
+    const s = mirror.style;
+    s.position = 'absolute';
+    s.visibility = 'hidden';
+    s.top = '0';
+    s.left = '-9999px';
+    s.boxSizing = 'border-box';
+    s.width = `${el.offsetWidth}px`;
+    s.fontFamily = cs.fontFamily;
+    s.fontSize = cs.fontSize;
+    s.fontWeight = cs.fontWeight;
+    s.lineHeight = cs.lineHeight;
+    s.letterSpacing = cs.letterSpacing;
+    s.padding = cs.padding;
+    s.tabSize = cs.tabSize;
+    s.whiteSpace = el.wrap === 'off' ? 'pre' : 'pre-wrap';
+    s.overflowWrap = 'anywhere';
+    const pos = el.selectionStart ?? el.value.length;
+    mirror.textContent = el.value.slice(0, pos);
+    const marker = document.createElement('span');
+    marker.textContent = '.';
+    mirror.appendChild(marker);
+
+    const elRect = el.getBoundingClientRect();
+    const surfRect = surface.getBoundingClientRect();
+    const mRect = mirror.getBoundingClientRect();
+    const markRect = marker.getBoundingClientRect();
+    const caretTop = elRect.top + (markRect.top - mRect.top);
+    const lineH = markRect.height || parseFloat(cs.lineHeight) || 18;
+    const caretBottom = caretTop + lineH;
+
+    const vMargin = lineH * 1.5;
+    if (caretTop < surfRect.top + vMargin) {
+      surface.scrollTop -= surfRect.top + vMargin - caretTop;
+    } else if (caretBottom > surfRect.bottom - vMargin) {
+      surface.scrollTop += caretBottom - (surfRect.bottom - vMargin);
+    }
+
+    // Horizontal only matters when lines don't wrap (the surface scrolls sideways).
+    if (el.wrap === 'off') {
+      const caretLeft = elRect.left + (markRect.left - mRect.left);
+      const gutterW = gutterRef.current?.offsetWidth ?? 0;
+      const hMargin = 24;
+      const leftBound = surfRect.left + gutterW + hMargin;
+      if (caretLeft < leftBound) {
+        surface.scrollLeft -= leftBound - caretLeft;
+      } else if (caretLeft > surfRect.right - hMargin) {
+        surface.scrollLeft += caretLeft - (surfRect.right - hMargin);
+      }
+    }
+  }, []);
+
+  useEffect(() => () => {
+    if (caretMirrorRef.current) {
+      caretMirrorRef.current.remove();
+      caretMirrorRef.current = null;
+    }
+  }, []);
+  // Soft-wrap long lines (default). When off, full-width text scrolls
+  // horizontally instead of wrapping. Wrapping is always on in focus mode (a
+  // narrow reading column has nothing to gain from horizontal scroll).
+  const wrapText = settings.editorWrap;
+  const noWrap = !wrapText && !focusMode;
   // Line numbers are a full-width-mode feature only: the gutter needs the left
-  // edge, which fights the centered focus-mode column. So they're suppressed
-  // while focus mode is on (and the focus-mode toggle works normally again).
+  // edge, which fights the centered focus-mode column.
   const lineNumbers = settings.editorLineNumbers && !focusMode;
+  // When lines BOTH wrap AND show numbers, the gutter can't use simple
+  // line-height arithmetic (a wrapped line spans several rows). Instead we
+  // measure each logical line's rendered height from the sizer and size the
+  // gutter blocks to match, so one number sits at each line's first row and the
+  // wrapped rows stay blank. No-wrap line numbers keep the cheap arithmetic path.
+  const measuredGutter = lineNumbers && !noWrap;
+  const measuredGutterRef = useRef(measuredGutter);
+  measuredGutterRef.current = measuredGutter;
+
+  // Keep the invisible sizer (drives auto-height) and the line-number gutter, if
+  // present, in sync with `text`. Stable identity (reads mode from a ref) so the
+  // many imperative call sites don't need it in their dep arrays.
+  const paintMirror = useCallback((text: string) => {
+    const sizer = sizerRef.current;
+    const gutter = gutterRef.current;
+    if (measuredGutterRef.current) {
+      if (sizer) renderLineBlocks(sizer, text, styles.measureLine);
+      if (sizer && gutter) {
+        const unit = probeRef.current ? probeRef.current.getBoundingClientRect().height : 0;
+        syncGutterHeights(sizer, gutter, styles.gutterLine, unit);
+      }
+    } else {
+      if (sizer) sizer.textContent = text + '\n';
+      if (gutter) gutter.textContent = lineNumberText(text);
+    }
+  }, []);
 
   // --- in-note search / replace ---
   const [searchOpen, setSearchOpen] = useState(false);
@@ -216,8 +385,7 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
     const el = bodyRef.current;
     if (el && !preview) {
       el.value = next;
-      if (sizerRef.current) sizerRef.current.textContent = next + '\n';
-      if (gutterRef.current) gutterRef.current.textContent = lineNumberText(next);
+      paintMirror(next);
       el.setSelectionRange(caret, caret);
       el.focus();
     }
@@ -267,8 +435,7 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
   // markdown preview) — otherwise the sizer stays empty and scrolling breaks.
   useEffect(() => {
     if (preview) return; // textarea/sizer aren't mounted in preview
-    if (sizerRef.current) sizerRef.current.textContent = content + '\n';
-    if (gutterRef.current) gutterRef.current.textContent = lineNumberText(content);
+    paintMirror(content);
     const el = bodyRef.current;
     if (el && el.value !== content) {
       el.value = content;
@@ -281,17 +448,41 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
 
   const onType = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const v = e.currentTarget.value;
-    if (sizerRef.current) sizerRef.current.textContent = v + '\n'; // instant height, no React
-    if (gutterRef.current) gutterRef.current.textContent = lineNumberText(v);
+    paintMirror(v); // instant height + gutter, no React
+    scrollCaretIntoView(); // follow the caret onto its new line
     setContent(v);
   };
 
-  // Seed / refresh the line-number gutter when it's toggled on or the view flips
-  // between edit and preview (typing keeps it current via onType imperatively).
+  // Keep the caret visible during navigation too (arrows, Home/End, PageUp/Down).
+  const onBodyKeyUp = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key.startsWith('Arrow') || e.key === 'Home' || e.key === 'End'
+      || e.key === 'PageUp' || e.key === 'PageDown') {
+      scrollCaretIntoView();
+    }
+  };
+
+  // Seed / refresh the gutter (and measured-mode sizer blocks) when line numbers
+  // or wrap toggle, the font changes, or the view flips edit↔preview. While
+  // wrapping with line numbers, also re-measure when the editor width changes
+  // (filtered to width so our own height writes don't loop the observer). Typing
+  // keeps everything current via onType imperatively.
   useEffect(() => {
-    if (gutterRef.current) gutterRef.current.textContent = lineNumberText(content);
+    if (preview) return;
+    paintMirror(bodyRef.current?.value ?? content);
+    if (!measuredGutter) return;
+    const area = editAreaRef.current;
+    if (!area) return;
+    let lastWidth = area.clientWidth;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[entries.length - 1].contentRect.width;
+      if (Math.abs(w - lastWidth) < 0.5) return;
+      lastWidth = w;
+      paintMirror(bodyRef.current?.value ?? '');
+    });
+    ro.observe(area);
+    return () => ro.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lineNumbers, preview]);
+  }, [lineNumbers, measuredGutter, preview, settings.editorFontPx, settings.editorTypeface]);
 
   // Escape closes the in-note find bar from anywhere (even while typing in the
   // textarea, not just from the find input).
@@ -311,6 +502,87 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
   const partialStart = useRef<number | null>(null);
   const partialLen = useRef(0);
 
+  // Typewriter reveal: rather than dumping a whole recognized chunk at once
+  // (which reads as a jarring paste even when STT is fast), the region streams
+  // toward its target text a few chars per frame so dictation feels live.
+  // typeTarget is the full text the region should end up showing; partialLen is
+  // how much of it is visible so far; typeFinal marks a finalized utterance that
+  // commits to the draft once it has fully revealed.
+  const typeTarget = useRef('');
+  const typeFinal = useRef(false);
+  const shownText = useRef(''); // the region's currently-displayed string
+  const rafId = useRef<number | null>(null);
+
+  // Replace the current interim region's visible text with `visible`, keeping the
+  // caret at its end and the imperative sizer/gutter in sync. Returns the new
+  // full textarea value, or null when there's no open region / live textarea.
+  const paintRegion = useCallback((visible: string): string | null => {
+    const el = bodyRef.current;
+    if (!el || partialStart.current === null) return null;
+    const start = Math.min(partialStart.current, el.value.length);
+    const prevEnd = Math.min(start + partialLen.current, el.value.length);
+    const next = el.value.slice(0, start) + visible + el.value.slice(prevEnd);
+    el.value = next;
+    partialLen.current = visible.length;
+    shownText.current = visible;
+    const caret = start + visible.length;
+    el.setSelectionRange(caret, caret);
+    el.focus();
+    paintMirror(next);
+    return next;
+  }, [paintMirror]);
+
+  const stopReveal = useCallback(() => {
+    if (rafId.current !== null) { cancelAnimationFrame(rafId.current); rafId.current = null; }
+  }, []);
+
+  // One animation frame: move the visible region toward typeTarget. Whisper
+  // revises interim guesses ("I think" → "I thought"), so when the new target
+  // diverges from what's shown we first BACKSPACE (delete) down to the longest
+  // common prefix, then type forward again — a visible correction rather than an
+  // in-place character swap. Pure appends (the common case) skip straight to
+  // typing forward. Steps scale with the distance so it never lags behind speech;
+  // backspacing runs a bit faster than typing. Kept in a ref for fresh state.
+  const stepRef = useRef<() => void>(() => {});
+  stepRef.current = () => {
+    rafId.current = null;
+    if (partialStart.current === null) return;
+    const target = typeTarget.current;
+    const shown = shownText.current;
+    if (shown === target) {
+      if (typeFinal.current) {
+        const done = paintRegion(target);
+        partialStart.current = null;
+        partialLen.current = 0;
+        shownText.current = '';
+        typeTarget.current = '';
+        typeFinal.current = false;
+        if (done !== null) setContent(done); // one undo step per utterance; triggers autosave
+      }
+      return;
+    }
+    // Longest common prefix of what's shown and where we're headed.
+    let cp = 0;
+    const max = Math.min(shown.length, target.length);
+    while (cp < max && shown[cp] === target[cp]) cp++;
+    let visible: string;
+    if (shown.length > cp) {
+      // Divergent tail still on screen — delete back toward the common prefix.
+      const step = Math.max(1, Math.ceil((shown.length - cp) / 4));
+      visible = shown.slice(0, Math.max(cp, shown.length - step));
+    } else {
+      // Shown is a prefix of target — type the rest forward.
+      const step = Math.max(1, Math.ceil((target.length - shown.length) / 8));
+      visible = target.slice(0, shown.length + step);
+    }
+    paintRegion(visible);
+    rafId.current = requestAnimationFrame(() => stepRef.current());
+  };
+
+  const kickReveal = useCallback(() => {
+    if (rafId.current === null) rafId.current = requestAnimationFrame(() => stepRef.current());
+  }, []);
+
   const applyTranscript = useCallback(
     (text: string, isFinal: boolean) => {
       const piece = text.trim();
@@ -322,6 +594,7 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
       if (isFinal) {
         const cmd = matchVoiceCommand(piece);
         if (cmd) {
+          stopReveal();
           if (el && !preview) {
             if (partialStart.current !== null) {
               const s = Math.min(partialStart.current, el.value.length);
@@ -331,16 +604,22 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
             }
             partialStart.current = null;
             partialLen.current = 0;
+            shownText.current = '';
+            typeTarget.current = '';
+            typeFinal.current = false;
             const caret = el.selectionStart ?? el.value.length;
             const { next, caret: nc } = applyCommandToText(el.value.slice(0, caret), el.value.slice(caret), cmd);
             el.value = next;
             el.setSelectionRange(nc, nc);
             el.focus();
-            if (sizerRef.current) sizerRef.current.textContent = next + '\n';
+            paintMirror(next);
             setContent(next);
           } else {
             partialStart.current = null;
             partialLen.current = 0;
+            shownText.current = '';
+            typeTarget.current = '';
+            typeFinal.current = false;
             const { next } = applyCommandToText(content, '', cmd);
             setContent(next);
           }
@@ -350,13 +629,31 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
 
       // No live textarea (markdown preview): drop interim state; append finals.
       if (!el || preview) {
+        stopReveal();
         partialStart.current = null;
         partialLen.current = 0;
+        shownText.current = '';
+        typeTarget.current = '';
+        typeFinal.current = false;
         if (isFinal && piece) {
           const sep = content && !/\s$/.test(content) ? ' ' : '';
           setContent(content + sep + piece);
         }
         return;
+      }
+
+      // A new utterance arriving while the previous final is still revealing:
+      // flush the old one to its end and commit before opening a fresh region,
+      // so nothing spoken is dropped and the regions don't overlap.
+      if (typeFinal.current && partialStart.current !== null) {
+        stopReveal();
+        const done = paintRegion(typeTarget.current);
+        partialStart.current = null;
+        partialLen.current = 0;
+        shownText.current = '';
+        typeTarget.current = '';
+        typeFinal.current = false;
+        if (done !== null) setContent(done);
       }
 
       // Nothing to show yet and no open region — wait for real words.
@@ -372,24 +669,13 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
         partialLen.current = 0;
       }
 
-      // Replace the region's previous text with the latest recognition.
-      const start = Math.min(partialStart.current, el.value.length);
-      const prevEnd = Math.min(start + partialLen.current, el.value.length);
-      const next = el.value.slice(0, start) + piece + el.value.slice(prevEnd);
-      el.value = next;
-      partialLen.current = piece.length;
-      const caret = start + piece.length;
-      el.setSelectionRange(caret, caret);
-      el.focus();
-      if (sizerRef.current) sizerRef.current.textContent = next + '\n';
-
-      if (isFinal) {
-        partialStart.current = null;
-        partialLen.current = 0;
-        setContent(next); // one undo step per utterance; triggers autosave
-      }
+      // Aim the region at the latest recognition and let the reveal loop stream
+      // toward it; a final commits from inside the loop once fully shown.
+      typeTarget.current = piece;
+      typeFinal.current = isFinal;
+      kickReveal();
     },
-    [content, preview, setContent],
+    [content, preview, setContent, paintRegion, paintMirror, stopReveal, kickReveal],
   );
 
   // Route transcripts to whichever editor is active. A ref keeps the registered
@@ -403,15 +689,23 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
   }, [note.id, registerSink, clearSink]);
 
   // Safety net: if a session ends with interim text still uncommitted (e.g. an
-  // error or abrupt stop with no final), commit the current textarea value so
-  // the spoken words aren't lost, and clear the region.
+  // error or abrupt stop with no final), flush the region to its full target so
+  // words still mid-reveal aren't lost, commit it, and clear the region.
   useEffect(() => {
     if (sttActive || partialStart.current === null) return;
+    stopReveal();
+    const done = typeTarget.current ? paintRegion(typeTarget.current) : null;
     partialStart.current = null;
     partialLen.current = 0;
-    const el = bodyRef.current;
-    if (el) setContent(el.value);
-  }, [sttActive, setContent]);
+    shownText.current = '';
+    typeTarget.current = '';
+    typeFinal.current = false;
+    const finalVal = done ?? bodyRef.current?.value ?? null;
+    if (finalVal !== null) setContent(finalVal);
+  }, [sttActive, setContent, stopReveal, paintRegion]);
+
+  // Cancel any in-flight reveal frame when the editor unmounts.
+  useEffect(() => () => stopReveal(), [stopReveal]);
 
   // Word count is O(n); recompute it a beat after typing stops, not per keystroke.
   const [words, setWords] = useState(() => wordCount(note.content));
@@ -584,7 +878,7 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
                 active={sttActive}
                 onClick={() => void useSttStore.getState().toggleSession({ newNote: false })}
               >
-                {sttActive ? <MicOff size={17} /> : <Mic size={17} />}
+                {sttActive ? <Mic size={17} /> : <MicOff size={17} />}
               </IconButton>
             </>
           )}
@@ -650,17 +944,19 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
       )}
 
       <div
-        className={cn(styles.surface, lineNumbers && !preview && styles.surfaceLined)}
+        ref={surfaceRef}
+        className={cn(styles.surface, noWrap && !preview && styles.surfaceLined)}
         onMouseDown={keepFocusInBody}
       >
-        <div className={cn(styles.column, !focusMode && styles.wide, lineNumbers && !preview && styles.lined)}>
+        <div className={cn(styles.column, !focusMode && styles.wide, noWrap && !preview && styles.lined, lineNumbers && !preview && styles.linedGutter)}>
           {preview && markdownOn ? (
             <MarkdownView content={content} className={styles.preview} />
           ) : (
-            <div className={cn(styles.editArea, lineNumbers && styles.withGutter)}>
+            <div ref={editAreaRef} className={cn(styles.editArea, noWrap && styles.nowrap, lineNumbers && styles.withGutter, measuredGutter && styles.measured)}>
               {/* Line-number gutter (logical lines). Kept in sync imperatively
                   alongside the sizer so typing does no React reconciliation. */}
               {lineNumbers && <div className={styles.gutter} aria-hidden ref={gutterRef} />}
+              {measuredGutter && <div className={cn(styles.measureLine, styles.lineProbe)} aria-hidden ref={probeRef}>0</div>}
               {/* Invisible replica sizes the grid cell to the content (updated
                   imperatively in onType / the sync effect — never via React),
                   so the full-width .surface stays the only scroller. */}
@@ -677,8 +973,9 @@ export function Editor({ note, seedContent }: { note: Note; seedContent?: string
                 placeholder="Start typing…"
                 defaultValue={note.content}
                 onChange={onType}
+                onKeyUp={onBodyKeyUp}
                 spellCheck={settings.spellcheck}
-                wrap={lineNumbers ? 'off' : 'soft'}
+                wrap={noWrap ? 'off' : 'soft'}
                 autoFocus
               />
             </div>

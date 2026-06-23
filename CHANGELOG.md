@@ -4,6 +4,42 @@ All notable changes to Notes are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); this project
 uses [Semantic Versioning](https://semver.org/).
 
+## [1.2.5] - 2026-06-23
+
+### Added
+- **Wrap text toggle.** New Settings → Editor option (on by default). When on,
+  long lines wrap to the next line; when off, full-width text scrolls
+  horizontally instead. Wrapping is always on in Focus mode.
+- **Line numbers now work with wrapping.** The gutter measures each logical
+  line's wrapped height, so a wrapped line keeps a single number and its
+  continuation rows stay blank, with numbers staying aligned and evenly spaced.
+  Line numbers no longer force a non-wrapping view.
+
+### Changed
+- **Dictation types out live.** Transcribed speech now streams into the note
+  character by character with an adaptive, ease-out cadence instead of pasting a
+  whole sentence at once, so fast speech still feels responsive. When Whisper
+  revises an interim guess, the text backspaces to the common prefix and retypes
+  rather than swapping characters in place.
+- **Dictation mic icon reflects state.** A normal microphone shows while
+  listening and a struck-through microphone when dictation is off (matching the
+  common meeting-app convention), instead of the inverse.
+- **Full-bleed writing area.** In full-width mode the editor fills the entire
+  surface: the textarea spans the whole width and height with no dead zone beside
+  it and no gaps above or below, while the text keeps a comfortable inset.
+- **New-install defaults.** Fresh installs now open full-width with wrap and line
+  numbers on. (Existing preferences are kept.)
+
+### Fixed
+- **Gutter no longer bleeds through.** The line-number gutter is fully opaque
+  (so horizontally scrolled text never shows through it) and has a divider rule
+  separating it from the text; its divider now spans the full editor height.
+- **Long lines wrap correctly.** A textarea's intrinsic minimum width was
+  silently preventing the text column from wrapping; it now wraps as expected.
+- **Caret stays in view.** Typing or navigating with the keyboard now scrolls the
+  writing surface to keep the caret visible, which the auto-growing editor had
+  stopped doing.
+
 ## [1.2.4] - 2026-06-22
 
 ### Added
