@@ -24,10 +24,13 @@ export function BootEditor() {
   return (
     <div
       className={styles.editor}
-      style={{ '--editor-font-size': `${settings.editorFontPx}px`, '--editor-font': fontFamily } as React.CSSProperties}
+      style={{
+        '--editor-font-size': `${settings.editorFontPx}px`,
+        '--editor-font': fontFamily,
+        '--editor-font-weight': String(settings.editorFontWeight),
+      } as React.CSSProperties}
     >
       <div className={styles.toolbar}>
-        <SaveStatePill state="clean" />
         <div className={styles.toolbarActions}>
           <IconButton label="Loading…" disabled><AlignCenter size={17} /></IconButton>
           <IconButton label="Loading…" disabled><Palette size={17} /></IconButton>
@@ -35,19 +38,18 @@ export function BootEditor() {
           <IconButton label="Loading…" disabled><Download size={17} /></IconButton>
           <Button variant="primary" size="sm" icon={<Save size={15} />} disabled>Save</Button>
         </div>
+        <SaveStatePill state="clean" />
       </div>
 
       <div className={styles.surface}>
-        <div className={cn(styles.column, !settings.focusMode && styles.wide)}>
-          <textarea
-            className={styles.body}
-            placeholder="Start typing…"
-            value={bootContent}
-            onChange={(e) => setBootContent(e.target.value)}
-            spellCheck
-            autoFocus
-          />
-        </div>
+        <textarea
+          className={cn(styles.bootBody, settings.focusMode && styles.bootBodyFocus)}
+          placeholder="Start typing…"
+          value={bootContent}
+          onChange={(e) => setBootContent(e.target.value)}
+          spellCheck
+          autoFocus
+        />
       </div>
 
       <div className={styles.statusbar}>

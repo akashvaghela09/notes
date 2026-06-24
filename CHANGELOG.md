@@ -4,6 +4,30 @@ All notable changes to Notes are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); this project
 uses [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] - 2026-06-24
+
+### Changed
+- **New editor engine (CodeMirror).** The writing surface now runs on CodeMirror
+  instead of a plain textarea. Rendering is virtualized, so typing stays fast in
+  long notes (the previous editor did work proportional to the note's length on
+  every keystroke and slowed down past ~30 lines). Line numbers and text wrapping
+  are now native and always aligned, including a single number per wrapped line.
+- **Bundled the Inter font.** Inter (the app's intended typeface) now ships with
+  the app as a variable font instead of falling back to a system font. Text is
+  cleaner and lighter, and the new font-weight setting has real weights to use.
+
+### Added
+- **Font weight setting.** Settings → Editor → Font weight (Light / Normal /
+  Medium). Applies live to the editor and preview. New installs default to Light.
+
+### Fixed
+- **Caret no longer drifts.** Undo/redo now leaves the caret at the edit it
+  changed rather than jumping to the end, and the caret stays visible during
+  dictation.
+- **Smoother typing in large notes.** Edits sync to autosave/undo on a short
+  debounce, so steady typing does no per-keystroke React work; saves and exports
+  always read the live document so nothing is lost.
+
 ## [1.2.5] - 2026-06-23
 
 ### Added

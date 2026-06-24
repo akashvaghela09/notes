@@ -108,233 +108,44 @@
 
 .surface {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   /* Block scroller (not flex) composites scrolling more smoothly. */
 }
-/* No-wrap view: lines don't wrap, so the surface scrolls horizontally too (and,
-   when line numbers are on, the gutter stays exactly aligned with each line). */
-.surfaceLined {
-  overflow-x: auto;
+/* CodeMirror host fills the surface; CM's own scroller handles scrolling. */
+.cm {
+  height: 100%;
 }
-.column {
+/* Boot writing surface (shown while SQLite connects). A plain textarea styled to
+   match the CodeMirror content so the hand-off to the real editor is seamless. */
+.bootBody {
   width: 100%;
-  max-width: var(--editor-max-width);
-  margin: 0 auto; /* centered in focus mode; full width when .wide */
-  /* Modest bottom space so the last line clears the status bar when you type
-     at the end. It's only visible at the very bottom; scrolling up shows full
-     content. */
-  padding: var(--space-6) var(--space-6) 14vh;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  /* Fill the scroller's height even when the note is short, so the edit area
-     (and the line-number gutter's divider) reaches the bottom of the view. */
-  min-height: 100%;
-}
-/* Focus mode off → full editor width like a normal text editor. Full-bleed: the
-   edit area fills the whole surface (text breathing room comes from the layers'
-   own padding below), so there's no dead gap above/below/beside it. */
-.wide {
-  max-width: none;
-  padding: 0;
-}
-/* No-wrap view ignores focus centering: the writing area is left-aligned and
-   grows with its (non-wrapping) content so it scrolls horizontally as one. */
-.lined {
-  max-width: none;
-  margin: 0;
-  width: max-content;
-  min-width: 100%;
-}
-/* With a gutter the text sits flush-left so the gutter owns the left padding. */
-.linedGutter {
-  padding-left: 0;
-}
-
-/* CSS auto-sizer: the sizer, backdrop, and textarea share one grid cell. The
-   sizer (full text) sets the cell height, so the textarea grows with content
-   without any JS measurement — the .surface remains the only scroller. */
-.editArea {
-  display: grid;
-  width: 100%;
-  /* The text column always fills the available width (so the textarea spans the
-     whole area, no dead zone), and wraps within it. */
-  grid-template-columns: minmax(0, 1fr);
-  /* Grow to fill the column's height when the note is short (so the gutter
-     divider reaches the bottom), while the single row keeps a content-sized
-     minimum so a long note still scrolls naturally. */
-  flex: 1 1 auto;
-  grid-template-rows: minmax(min-content, 1fr);
-}
-.editArea > * {
-  grid-area: 1 / 1 / 2 / 2;
-}
-/* No-wrap: text layers size to their (non-wrapping) content so the surface
-   scrolls horizontally as one, and each visual line maps 1:1 to a gutter number
-   when line numbers are on. The column still fills the width when content is
-   short (minmax floor is max-content, so a long line grows it and scrolls). */
-.editArea.nowrap {
-  width: max-content;
-  min-width: 100%;
-  grid-template-columns: minmax(max-content, 1fr);
-}
-.nowrap .sizer,
-.nowrap .body,
-.nowrap .backdrop {
-  white-space: pre;
-  overflow-wrap: normal;
-}
-/* With line numbers: a gutter column on the left, the text fills the rest. */
-.editArea.withGutter {
-  grid-template-columns: max-content minmax(0, 1fr);
-  column-gap: 0;
-}
-.editArea.nowrap.withGutter {
-  grid-template-columns: max-content minmax(max-content, 1fr);
-}
-.editArea.withGutter > * {
-  grid-column: 2;
-}
-.editArea.withGutter > .gutter {
-  grid-column: 1;
-}
-/* One sizer block per logical line, wrapping exactly like the textarea so its
-   height can be measured. Carries the editor font + line-height explicitly so it
-   matches the textarea row height even when used as the standalone probe (which
-   lives outside the sizer and would otherwise inherit the UI line-height). */
-.measureLine {
-  margin: 0;
-  padding: 0;
-  font-family: var(--editor-font);
-  font-size: var(--editor-font-size);
-  line-height: var(--lh-read);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-/* One gutter block per logical line; height is set inline to match its line.
-   The number sits at the top (first wrapped row); the rest stays blank. */
-.gutterLine {
-  overflow: hidden;
-}
-/* Out-of-flow single-row probe: its height is one text line, used to snap each
-   gutter block to a whole number of rows so the numbers stay evenly spaced and
-   pixel-aligned with the wrapped text. */
-.lineProbe {
-  position: absolute;
-  top: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-/* VS Code-style gutter: muted, right-aligned numbers, a divider rule separating
-   it from the text, a stable width so the text doesn't shift as the line count
-   grows, and a comfortable gap to the text. Pinned to the left as the surface
-   scrolls horizontally; an OPAQUE background (no opacity) so horizontally
-   scrolled text never bleeds through it. */
-.gutter {
-  font-family: var(--editor-font);
-  font-size: var(--editor-font-size);
-  line-height: var(--lh-read);
-  min-height: 70vh;
-  min-width: 2ch;
-  white-space: pre;
-  text-align: right;
-  color: var(--text-tertiary);
-  user-select: none;
-  pointer-events: none;
-  padding: var(--space-4) var(--space-3) 0;
-  border-right: 1px solid var(--border);
-  tab-size: 1;
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  background: var(--bg);
-}
-/* Breathing room between the gutter's divider and the text. Applied to every
-   text layer equally so the textarea, sizer, and search backdrop stay aligned
-   and wrap at the same width. */
-.withGutter .body,
-.withGutter .sizer,
-.withGutter .backdrop {
-  padding-left: var(--space-3);
-}
-.sizer,
-.body,
-.backdrop {
-  font-family: var(--editor-font);
-  font-size: var(--editor-font-size);
-  line-height: var(--lh-read);
-  min-height: 70vh;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  margin: 0;
-  /* Internal breathing room: the layer fills the (full-bleed) edit area, but the
-     text/caret is inset from the edges. The gutter's matching top padding keeps
-     line numbers aligned; .withGutter overrides padding-left for the divider. */
-  padding: var(--space-4) var(--space-4) var(--space-6);
+  height: 100%;
   border: none;
-  width: 100%;
-  /* Without this a textarea's intrinsic min-width keeps the grid text column
-     from shrinking, so wrapping silently fails and text scrolls sideways. */
-  min-width: 0;
-}
-.sizer {
-  visibility: hidden;
-  pointer-events: none;
-}
-.body {
-  overflow: hidden; /* grows via the grid; the .surface scrolls */
+  outline: none;
   resize: none;
-  color: var(--text);
   background: none;
-  z-index: 1;
+  color: var(--text);
+  font-family: var(--editor-font);
+  font-size: var(--editor-font-size);
+  font-weight: var(--editor-font-weight, 400);
+  line-height: var(--lh-read);
+  padding: var(--space-4) var(--space-4) var(--space-6);
+  -webkit-font-smoothing: antialiased;
 }
-.body::placeholder {
+.bootBody::placeholder {
   color: var(--text-tertiary);
 }
-/* While searching, the text layer goes transparent so the highlight backdrop
-   shows through; the caret stays visible. */
-.bodyTransparent {
-  color: transparent;
-  caret-color: var(--text);
-}
-
-/* Highlight backdrop: mirrors the textarea text exactly, beneath it. */
-.backdrop {
-  z-index: 0;
-  color: var(--text);
-  pointer-events: none;
-  user-select: none;
-}
-/* Keep the bold first line consistent across all three layers so the sizer
-   height and highlight positions line up with the textarea. */
-.sizer::first-line,
-.body::first-line,
-.backdrop::first-line {
-  font-weight: 700;
-}
-.mark {
-  background: rgba(250, 204, 21, 0.32);
-  color: inherit;
-  border-radius: 2px;
-}
-.markActive {
-  background: rgba(234, 179, 8, 0.85);
-  color: inherit;
-  border-radius: 2px;
-}
-/* No focus ring on the writing surface — a border there is distracting. */
-.body:focus,
-.body:focus-visible {
-  outline: none;
-  box-shadow: none;
-}
-/* The first line reads as the title without a separate field. */
-.body::first-line {
-  font-weight: 700;
+/* Focus mode: center the column at a comfortable width, mirroring the editor. */
+.bootBodyFocus {
+  display: block;
+  max-width: var(--editor-max-width);
+  margin: 0 auto;
 }
 .preview {
   font-family: var(--editor-font);
   font-size: var(--editor-font-size);
+  font-weight: var(--editor-font-weight, 400);
 }
 
 .statusbar {
