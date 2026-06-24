@@ -274,6 +274,18 @@ export function SettingsModal() {
                   <span className={styles.fontPx}>{s.editorFontPx}px</span>
                 </div>
               </Row>
+              <Row label="Font weight" hint="How thick the editor text appears.">
+                <Segmented
+                  size="sm"
+                  value={String(s.editorFontWeight)}
+                  onChange={(v) => update('editorFontWeight', Number(v))}
+                  options={[
+                    { value: '300', label: 'Light' },
+                    { value: '400', label: 'Normal' },
+                    { value: '500', label: 'Medium' },
+                  ]}
+                />
+              </Row>
               <Row label="Wrap text" hint="Wrap long lines. Off → full-width text scrolls sideways instead.">
                 <Switch checked={s.editorWrap} onChange={(v) => update('editorWrap', v)} label="Wrap text" />
               </Row>

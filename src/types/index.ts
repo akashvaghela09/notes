@@ -87,6 +87,8 @@ export interface Settings {
   /** Editor font size in px. Adjustable continuously via Ctrl+Shift+±. */
   editorFontPx: number;
   editorTypeface: EditorTypeface;
+  /** Editor text font weight (e.g. 300 light, 400 normal, 500 medium). */
+  editorFontWeight: number;
   /** Show a line-number gutter in the editor. */
   editorLineNumbers: boolean;
   /** Soft-wrap long lines. Off → full-width text scrolls horizontally. On by

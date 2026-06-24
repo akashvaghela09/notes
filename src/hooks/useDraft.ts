@@ -14,8 +14,9 @@ export interface DraftController {
   setContent: (c: string) => void;
   saveState: SaveState;
   dirty: boolean;
-  /** Commit working copy → saved note, then clear the draft + undo history. */
-  commit: () => Promise<void>;
+  /** Commit working copy → saved note, then clear the draft + undo history.
+   *  Pass `latest` to commit a value newer than the (possibly debounced) state. */
+  commit: (latest?: string) => Promise<void>;
   /** Throw away the draft and revert to the last saved version. */
   discard: () => Promise<void>;
   undo: () => void;
@@ -178,9 +179,11 @@ export function useDraft(note: Note, seedContent?: string): DraftController {
     bumpSync();
   }, [applyContent]);
 
-  const commit = useCallback(async () => {
+  const commit = useCallback(async (latest?: string) => {
     autosave.cancel();
-    await commitNote(note.id, deriveTitle('', contentRef.current), contentRef.current);
+    const c = latest ?? contentRef.current;
+    contentRef.current = c;
+    await commitNote(note.id, deriveTitle('', c), c);
     await draftsRepo.clear(note.id);
     setDirtyTab(note.id, false);
     setSaveState('saved');
