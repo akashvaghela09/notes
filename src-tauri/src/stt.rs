@@ -425,6 +425,11 @@ fn run_session(app: &AppHandle, model_path: &str, lang: &'static str, stop: &Arc
     let min_seg = ms_to_samples(MIN_SEGMENT_MS);
     let min_partial = ms_to_samples(MIN_PARTIAL_MS);
     let step = Duration::from_millis(PARTIAL_STEP_MS);
+    // Minimum wait before the next interim pass. Starts at `step` but grows to
+    // match how long the last pass took, so a long sentence (whose whole segment
+    // is re-transcribed each time) gets fewer live updates instead of pinning
+    // the CPU. The final pass still transcribes the complete segment.
+    let mut partial_gap = step;
 
     while !stop.load(Ordering::SeqCst) {
         let n = consumer.pop_slice(&mut scratch);
@@ -480,8 +485,13 @@ fn run_session(app: &AppHandle, model_path: &str, lang: &'static str, stop: &Arc
 
         // Live interim result: re-transcribe the utterance-so-far on a cadence,
         // so words appear as they're spoken instead of only at the sentence end.
-        if triggered && segment.len() >= min_partial && last_partial.elapsed() >= step {
+        if triggered && segment.len() >= min_partial && last_partial.elapsed() >= partial_gap {
+            let t0 = Instant::now();
             let text = run_inference(&mut wstate, &segment, lang, n_threads);
+            // Space the next interim by at least this pass's own cost (floored at
+            // `step`), so long sentences back off automatically and never starve
+            // audio capture.
+            partial_gap = step.max(t0.elapsed());
             if !text.is_empty() {
                 let _ = app.emit("stt://partial", Partial { text });
             }
@@ -489,26 +499,39 @@ fn run_session(app: &AppHandle, model_path: &str, lang: &'static str, stop: &Arc
         }
     }
 
-    // On stop, drain any audio still sitting in the ring buffer (captured but not
-    // yet processed) and append it — otherwise the last spoken words are lost.
-    loop {
-        let n = consumer.pop_slice(&mut scratch);
-        if n == 0 {
-            break;
+    // On stop, an utterance may still be in progress. The OS/cpal capture buffer
+    // can still hold the last fraction of a second of speech that hasn't reached
+    // our ring buffer yet, so a single instant drain clips the final word(s).
+    // Instead, keep draining across a short grace window: pull everything that's
+    // there, and during quiet wait out the window so stragglers still arrive.
+    // The stream is still playing here (dropped below). Only do this when an
+    // utterance is actually open (`triggered`) — stopping during silence has
+    // nothing pending to flush and would only feed Whisper noise.
+    if triggered {
+        let grace = Instant::now() + Duration::from_millis(300);
+        loop {
+            let n = consumer.pop_slice(&mut scratch);
+            if n > 0 {
+                resample_into(&scratch[..n], in_rate, TARGET_RATE, &mut resampled);
+                continue; // keep draining while audio is still flowing in
+            }
+            if Instant::now() >= grace {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(15));
         }
-        resample_into(&scratch[..n], in_rate, TARGET_RATE, &mut resampled);
-    }
-    if !resampled.is_empty() {
-        segment.extend_from_slice(&resampled);
-        resampled.clear();
-    }
+        if !resampled.is_empty() {
+            segment.extend_from_slice(&resampled);
+            resampled.clear();
+        }
 
-    // Flush whatever was mid-sentence when the user stopped — finalize it so no
-    // spoken words are dropped on stop.
-    if segment.len() >= ms_to_samples(150) {
-        let text = run_inference(&mut wstate, &segment, lang, n_threads);
-        if !text.is_empty() {
-            let _ = app.emit("stt://transcript", Transcript { text, segment_index: seg_index });
+        // Flush whatever was mid-sentence when the user stopped — finalize it so
+        // no spoken words are dropped on stop.
+        if segment.len() >= ms_to_samples(150) {
+            let text = run_inference(&mut wstate, &segment, lang, n_threads);
+            if !text.is_empty() {
+                let _ = app.emit("stt://transcript", Transcript { text, segment_index: seg_index });
+            }
         }
     }
 
@@ -603,32 +626,43 @@ fn run_inference(
     lang: &'static str,
     n_threads: i32,
 ) -> String {
-    let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
-    params.set_n_threads(n_threads);
-    if lang == "en" {
-        params.set_language(Some("en"));
-    }
-    params.set_translate(false);
-    params.set_no_context(true);
-    params.set_single_segment(false);
-    params.set_print_special(false);
-    params.set_print_progress(false);
-    params.set_print_realtime(false);
-    params.set_print_timestamps(false);
-    params.set_suppress_blank(true);
-
-    if let Err(e) = wstate.full(params, samples) {
-        eprintln!("[stt] inference failed: {e}");
-        return String::new();
-    }
-
-    let mut out = String::new();
-    for segment in wstate.as_iter() {
-        if let Ok(text) = segment.to_str_lossy() {
-            out.push_str(&text);
+    // Isolate the whisper call: a bad/oversized clip can make it panic, and a
+    // panic here would otherwise unwind the whole worker thread and end the
+    // dictation session (what made long sentences "unexpectedly stop" partway,
+    // dropping everything after). Catch it so one failed pass just yields no
+    // text and the session keeps listening.
+    let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
+        params.set_n_threads(n_threads);
+        if lang == "en" {
+            params.set_language(Some("en"));
         }
-    }
-    clean_transcript(&out)
+        params.set_translate(false);
+        params.set_no_context(true);
+        params.set_single_segment(false);
+        params.set_print_special(false);
+        params.set_print_progress(false);
+        params.set_print_realtime(false);
+        params.set_print_timestamps(false);
+        params.set_suppress_blank(true);
+
+        if let Err(e) = wstate.full(params, samples) {
+            eprintln!("[stt] inference failed: {e}");
+            return String::new();
+        }
+
+        let mut out = String::new();
+        for segment in wstate.as_iter() {
+            if let Ok(text) = segment.to_str_lossy() {
+                out.push_str(&text);
+            }
+        }
+        clean_transcript(&out)
+    }));
+    outcome.unwrap_or_else(|_| {
+        eprintln!("[stt] inference panicked; skipping this pass (session stays live)");
+        String::new()
+    })
 }
 
 /// whisper emits leading spaces and bracketed non-speech tokens like [BLANK_AUDIO].

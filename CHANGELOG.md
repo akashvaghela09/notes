@@ -4,6 +4,25 @@ All notable changes to Notes are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); this project
 uses [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] - 2026-06-25
+
+### Fixed
+- **Dictation no longer drops the last words when you stop.** The microphone
+  buffers a fraction of a second of audio in the system layer, and stopping used
+  to finalize before that tail arrived, clipping the final 1-2 words. Stop now
+  waits out a short grace window and drains the remaining audio before
+  transcribing, so the last words are captured at any speaking pace.
+- **Long sentences no longer cut off mid-flow.** A faulting transcription pass
+  could tear down the whole dictation session, dropping everything after it
+  (most reproducible on long, 15+ word sentences). Transcription is now isolated
+  so a single failed pass is skipped and the session keeps listening.
+
+### Changed
+- **Live dictation preview backs off on long sentences.** The interim preview
+  re-transcribes the growing sentence on a cadence; it now spaces those passes
+  by how long the last one took, so a long sentence gets fewer live updates
+  instead of pinning the CPU. The final transcription still covers every word.
+
 ## [1.3.0] - 2026-06-24
 
 ### Changed
